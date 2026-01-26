@@ -1,4 +1,4 @@
-// funciones.js - VERSIÓN COMPLETA Y CORREGIDA
+// funciones.js - SISTEMA DE CONTROL SUBTE BA - VERSIÓN ESTABLE
 
 // ========== VARIABLES GLOBALES ==========
 let datosEstaciones = [];
@@ -7,11 +7,10 @@ let marcadores = [];
 let modoFiestaActivo = null;
 let intervaloFiesta = null;
 
-// ========== SISTEMA DE LOGIN MEJORADO ==========
+// ========== SISTEMA DE LOGIN ==========
 function checkLogin() {
     const passwordInput = document.getElementById('password');
     
-    // Si no existe el campo de password, acceso directo
     if (!passwordInput) {
         console.log('⚠️ Campo de password no encontrado - Acceso directo');
         document.getElementById('login-screen').style.display = 'none';
@@ -22,7 +21,6 @@ function checkLogin() {
     
     const password = passwordInput.value;
     
-    // Contraseña de demo o vacío para acceso rápido
     if (password === 'SUBTE2024' || password === '') {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard-content').style.display = 'block';
@@ -35,7 +33,6 @@ function checkLogin() {
 }
 
 function logout() {
-    // Detener efectos de fiesta si están activos
     if (intervaloFiesta) {
         clearInterval(intervaloFiesta);
     }
@@ -53,19 +50,11 @@ function logout() {
 function inicializarSistema() {
     console.log('✅ Inicializando sistema...');
     
-    // 1. Cargar datos de estaciones
     cargarDatosEstaciones();
-    
-    // 2. Actualizar estadísticas
     actualizarEstadisticasConexion();
-    
-    // 3. Inicializar mapa
     inicializarMapaSiEsPosible();
-    
-    // 4. Verificar modo fiesta activo
     verificarModoFiestaActivo();
     
-    // 5. Iniciar actualizaciones automáticas
     setInterval(actualizarDatosAutomaticamente, 10000);
     
     console.log('✅ Sistema inicializado correctamente');
@@ -111,7 +100,6 @@ function actualizarEstadisticasConexion() {
     const conectadas = datosEstaciones.filter(e => e.conexion.estado === 'conectado').length;
     const porcentaje = Math.round((conectadas / total) * 100);
     
-    // Actualizar números
     const wifiConnected = document.getElementById('wifi-connected');
     const wifiDisconnected = document.getElementById('wifi-disconnected');
     const wifiPercentage = document.getElementById('wifi-percentage');
@@ -120,7 +108,6 @@ function actualizarEstadisticasConexion() {
     if (wifiDisconnected) wifiDisconnected.textContent = total - conectadas;
     if (wifiPercentage) wifiPercentage.textContent = `${porcentaje}%`;
     
-    // Actualizar estado general
     const estadoElement = document.getElementById('estado-general');
     if (estadoElement) {
         if (conectadas === total) {
@@ -149,7 +136,6 @@ function conectarTodas() {
 }
 
 function filtrarMapa(tipo) {
-    // Actualizar botones activos
     const botones = document.querySelectorAll('.map-btn');
     if (botones.length > 0 && event && event.target) {
         botones.forEach(btn => {
@@ -165,45 +151,38 @@ function filtrarMapa(tipo) {
 function inicializarMapaSiEsPosible() {
     console.log('🗺️ Verificando condiciones para mapa...');
     
-    // Verificar si el contenedor del mapa existe
     const mapContainer = document.getElementById('map');
     if (!mapContainer) {
         console.log('❌ No se encontró el contenedor del mapa');
         return;
     }
     
-    // Verificar si Leaflet está cargado
     if (typeof L === 'undefined') {
         console.log('⚠️ Leaflet no está cargado, cargando...');
         cargarLeaflet();
         return;
     }
     
-    // Inicializar el mapa
     initMap();
 }
 
 function cargarLeaflet() {
-    // Verificar si ya estamos cargando Leaflet
     if (document.querySelector('script[src*="leaflet"]')) {
         console.log('⚠️ Leaflet ya se está cargando...');
         return;
     }
     
     console.log('📦 Cargando Leaflet CSS...');
-    // Cargar CSS
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
     document.head.appendChild(link);
     
     console.log('📦 Cargando Leaflet JS...');
-    // Cargar JS
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     script.onload = function() {
         console.log('✅ Leaflet cargado correctamente');
-        // Esperar un momento para asegurar que todo esté listo
         setTimeout(initMap, 500);
     };
     script.onerror = function() {
@@ -217,29 +196,24 @@ function cargarLeaflet() {
 function initMap() {
     console.log('🗺️ Inicializando mapa...');
     
-    // Verificar si el contenedor del mapa existe
     const mapContainer = document.getElementById('map');
     if (!mapContainer) {
         console.log('❌ No se encontró el contenedor del mapa');
         return;
     }
     
-    // Verificar si Leaflet está cargado
     if (typeof L === 'undefined') {
         console.log('❌ Leaflet no está disponible');
         return;
     }
     
     try {
-        // Crear mapa centrado en Buenos Aires
         mapa = L.map('map').setView([-34.6037, -58.3816], 13);
         
-        // Agregar capa de OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(mapa);
         
-        // Agregar marcadores
         actualizarMarcadores();
         
         console.log('✅ Mapa inicializado correctamente');
@@ -255,27 +229,22 @@ function actualizarMarcadores() {
         return;
     }
     
-    // Limpiar marcadores anteriores
     if (marcadores.length > 0) {
         marcadores.forEach(marker => mapa.removeLayer(marker));
         marcadores = [];
     }
     
-    // Verificar que hay datos
     if (!datosEstaciones || datosEstaciones.length === 0) {
         console.log('⚠️ No hay datos de estaciones para mostrar');
         return;
     }
     
-    // Agregar nuevos marcadores
     datosEstaciones.forEach(estacion => {
-        // Verificar que la estación tenga coordenadas
         if (!estacion.lat || !estacion.lon) {
             console.log(`⚠️ Estación ${estacion.nombre} no tiene coordenadas`);
             return;
         }
         
-        // Determinar color según estado
         let color, estadoTexto;
         if (estacion.dispositivo && estacion.dispositivo.estado) {
             switch(estacion.dispositivo.estado) {
@@ -300,14 +269,12 @@ function actualizarMarcadores() {
             estadoTexto = '🔌 Desconocido';
         }
         
-        // Crear ícono personalizado
         const icono = L.divIcon({
             className: 'custom-marker',
             html: `<div style="background: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
             iconSize: [20, 20]
         });
         
-        // Crear marcador
         const marker = L.marker([estacion.lat, estacion.lon], { icon: icono })
             .addTo(mapa)
             .bindPopup(`
@@ -362,7 +329,6 @@ function mostrarDetallesEstacion(estacionId) {
         </div>
     `;
     
-    // Mostrar como alerta personalizada
     const alertDiv = document.createElement('div');
     alertDiv.style.cssText = `
         position: fixed;
@@ -381,7 +347,6 @@ function mostrarDetallesEstacion(estacionId) {
     
     alertDiv.innerHTML = detallesHTML;
     
-    // Fondo oscuro
     const backdrop = document.createElement('div');
     backdrop.style.cssText = `
         position: fixed;
@@ -468,7 +433,6 @@ function mostrarPanelFiestas() {
         </div>
     `;
     
-    // Crear y mostrar modal
     const modal = document.createElement('div');
     modal.id = 'modal-fiesta';
     modal.innerHTML = modalHTML;
@@ -494,7 +458,6 @@ function activarFiesta(modo) {
     const frecuencia = parseFloat(frecuenciaInput.value);
     const duracion = parseInt(duracionInput.value);
     
-    // Activar en todas las estaciones
     datosEstaciones.forEach(estacion => {
         if (!estacion.iluminacion) {
             estacion.iluminacion = {};
@@ -507,7 +470,6 @@ function activarFiesta(modo) {
         };
     });
     
-    // Guardar configuración
     modoFiestaActivo = {
         modo: modo,
         frecuencia: frecuencia,
@@ -515,13 +477,8 @@ function activarFiesta(modo) {
         inicio: new Date().toISOString()
     };
     
-    // Iniciar animación
     iniciarAnimacionFiesta(modo, frecuencia);
-    
-    // Mostrar notificación
     mostrarNotificacion(`🎉 Modo ${modo.toUpperCase()} activado!`, '#2ecc71');
-    
-    // Cerrar modal
     cerrarModalFiesta();
 }
 
@@ -539,15 +496,12 @@ function desactivarFiesta() {
     
     modoFiestaActivo = null;
     
-    // Detener animación
     if (intervaloFiesta) {
         clearInterval(intervaloFiesta);
         intervaloFiesta = null;
     }
     
-    // Restaurar fondo normal
     document.body.style.background = 'linear-gradient(135deg, #1a237e 0%, #311b92 100%)';
-    
     mostrarNotificacion('⏹️ Modo fiesta desactivado', '#95a5a6');
     cerrarModalFiesta();
 }
@@ -562,17 +516,15 @@ function probarEfectoFiesta() {
     }
     
     const frecuencia = parseFloat(frecuenciaInput.value);
-    const colores = ['#FF0000', '#00FF00']; // Rojo y verde para prueba
+    const colores = ['#FF0000', '#00FF00'];
     
     let colorIndex = 0;
     const demoInterval = setInterval(() => {
-        // Cambiar fondo de la página
         document.body.style.background = colores[colorIndex];
         document.body.style.transition = 'background 0.3s';
         colorIndex = (colorIndex + 1) % colores.length;
     }, 1000 / frecuencia);
     
-    // Detener después de 3 segundos
     setTimeout(() => {
         clearInterval(demoInterval);
         document.body.style.background = 'linear-gradient(135deg, #1a237e 0%, #311b92 100%)';
@@ -583,7 +535,6 @@ function probarEfectoFiesta() {
 function iniciarAnimacionFiesta(modo, frecuencia) {
     console.log(`🎬 Iniciando animación: ${modo} a ${frecuencia}Hz`);
     
-    // Detener animación anterior si existe
     if (intervaloFiesta) {
         clearInterval(intervaloFiesta);
     }
@@ -592,7 +543,6 @@ function iniciarAnimacionFiesta(modo, frecuencia) {
     let colorIndex = 0;
     
     intervaloFiesta = setInterval(() => {
-        // Cambiar fondo del dashboard
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.style.background = colores[colorIndex];
@@ -605,11 +555,10 @@ function iniciarAnimacionFiesta(modo, frecuencia) {
 
 function verificarModoFiestaActivo() {
     console.log('🔍 Verificando modo fiesta activo...');
-    // Por ahora siempre devuelve null, en una versión completa leería de localStorage
     modoFiestaActivo = null;
 }
 
-// ========== CONFIGURACIÓN WIFI (versión simplificada) ==========
+// ========== CONFIGURACIÓN WIFI ==========
 function mostrarConfigWifiEstacion(estacionId) {
     console.log(`📡 Mostrando configuración WiFi para: ${estacionId}`);
     
@@ -662,7 +611,6 @@ function mostrarConfigWifiEstacion(estacionId) {
         </div>
     `;
     
-    // Crear y mostrar modal
     const modal = document.createElement('div');
     modal.id = 'modal-wifi';
     modal.innerHTML = modalHTML;
@@ -684,9 +632,8 @@ function probarConexionWifiSimple(estacionId) {
     const ssid = ssidInput.value;
     mostrarNotificacion(`🔍 Probando conexión a ${ssid}...`, '#3498db');
     
-    // Simular prueba de conexión
     setTimeout(() => {
-        const exito = Math.random() > 0.3; // 70% de éxito
+        const exito = Math.random() > 0.3;
         if (exito) {
             mostrarNotificacion(`✅ Conexión exitosa a ${ssid}`, '#2ecc71');
         } else {
@@ -721,7 +668,6 @@ function controlarLucesEstacion(estacionId) {
         return;
     }
     
-    // Toggle del estado de luces
     if (!estacion.iluminacion) {
         estacion.iluminacion = {};
     }
@@ -740,11 +686,9 @@ function controlarLucesEstacion(estacionId) {
 function mostrarNotificacion(mensaje, color) {
     console.log(`📢 Notificación: ${mensaje}`);
     
-    // Eliminar notificaciones anteriores
     const notifsAnteriores = document.querySelectorAll('.notification-custom');
     notifsAnteriores.forEach(notif => notif.remove());
     
-    // Crear nueva notificación
     const notif = document.createElement('div');
     notif.className = 'notification-custom';
     notif.style.cssText = `
@@ -760,3 +704,93 @@ function mostrarNotificacion(mensaje, color) {
         font-weight: bold;
         animation: slideIn 0.5s;
     `;
+    
+    notif.textContent = mensaje;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = `
+        margin-left: 15px;
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0 5px;
+    `;
+    closeBtn.onclick = () => notif.remove();
+    
+    notif.appendChild(closeBtn);
+    document.body.appendChild(notif);
+    
+    setTimeout(() => {
+        if (notif.parentElement) {
+            notif.remove();
+        }
+    }, 5000);
+}
+
+function actualizarDatosAutomaticamente() {
+    if (!datosEstaciones || datosEstaciones.length === 0) return;
+    
+    datosEstaciones.forEach(estacion => {
+        if (Math.random() < 0.1) {
+            if (estacion.conexion.estado === 'conectado') {
+                estacion.conexion.estado = 'desconectado';
+                if (estacion.conexion.wifi) {
+                    estacion.conexion.wifi.señal = 0;
+                }
+            } else {
+                estacion.conexion.estado = 'conectado';
+                if (estacion.conexion.wifi) {
+                    estacion.conexion.wifi.señal = 60 + Math.random() * 40;
+                }
+            }
+        }
+        
+        if (estacion.conexion.estado === 'conectado' && estacion.dispositivo) {
+            estacion.dispositivo.bateria += (Math.random() * 4 - 2);
+            estacion.dispositivo.bateria = Math.max(0, Math.min(100, estacion.dispositivo.bateria));
+            
+            if (estacion.dispositivo.bateria > 70) {
+                estacion.dispositivo.estado = 'normal';
+            } else if (estacion.dispositivo.bateria > 40) {
+                estacion.dispositivo.estado = 'alerta';
+            } else {
+                estacion.dispositivo.estado = 'critico';
+            }
+        }
+    });
+    
+    actualizarEstadisticasConexion();
+    if (mapa) actualizarMarcadores();
+}
+
+// ========== INICIALIZACIÓN AUTOMÁTICA ==========
+console.log('✅ Sistema de Control Subtes BA - funciones.js cargado');
+
+// Agregar evento para login con Enter
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📋 DOM cargado, sistema listo');
+    
+    const passwordInput = document.getElementById('password');
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                checkLogin();
+            }
+        });
+    }
+    
+    // Verificar si ya estamos logueados
+    setTimeout(function() {
+        const dashboard = document.getElementById('dashboard-content');
+        if (dashboard && dashboard.style.display !== 'none') {
+            console.log('🔍 Dashboard visible, verificando sistema...');
+        }
+    }, 500);
+});
+
+// Mensaje de bienvenida
+console.log('🎉 Sistema Subte BA - Clave: SUBTE2024 o vacío');
+console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
