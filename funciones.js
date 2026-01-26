@@ -754,7 +754,120 @@ function actualizarDatosAutomaticamente() {
     actualizarEstadisticasConexion();
     if (mapa) actualizarMarcadores();
 }
+// ========== COMPATIBILIDAD MULTINAVEGADOR ==========
 
+// Función para verificar si un elemento existe y es visible
+function elementoVisible(id) {
+    const elemento = document.getElementById(id);
+    return elemento && elemento.offsetParent !== null;
+}
+
+// Función de login mejorada
+function loginMejorado() {
+    const password = document.getElementById('password');
+    
+    if (!password) {
+        console.log('⚠️ Campo de password no encontrado');
+        // Acceso directo si no hay campo de password
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard-content').style.display = 'block';
+        inicializarSistema();
+        return;
+    }
+    
+    const passValue = password.value;
+    if (passValue === 'SUBTE2024' || passValue === '') {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard-content').style.display = 'block';
+        inicializarSistema();
+    } else {
+        alert('❌ Contraseña incorrecta\n\nPara demo use: SUBTE2024\nO deje vacío para acceso rápido');
+        password.value = '';
+        password.focus();
+    }
+}
+
+// Reemplazar la función original checkLogin
+window.checkLogin = loginMejorado;
+
+// Evento para permitir login con Enter
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('password');
+    const loginButton = document.querySelector('button[onclick*="checkLogin"]');
+    
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                loginMejorado();
+            }
+        });
+    }
+    
+    if (loginButton) {
+        // Reemplazar el onclick original
+        loginButton.onclick = loginMejorado;
+    }
+    
+    // Verificar si ya estamos logueados (en recarga de página)
+    setTimeout(function() {
+        const loginScreen = document.getElementById('login-screen');
+        const dashboard = document.getElementById('dashboard-content');
+        
+        if (loginScreen && dashboard && loginScreen.style.display !== 'none') {
+            // Mostrar mensaje de ayuda
+            console.log('✅ Sistema listo. Clave: SUBTE2024 o vacío');
+        }
+    }, 1000);
+});
+
+// ========== DETECCIÓN DE NAVEGADOR ==========
+function detectarNavegador() {
+    const userAgent = navigator.userAgent;
+    let navegador = 'Desconocido';
+    
+    if (userAgent.indexOf("Chrome") > -1) {
+        navegador = "Chrome";
+    } else if (userAgent.indexOf("Firefox") > -1) {
+        navegador = "Firefox";
+    } else if (userAgent.indexOf("Safari") > -1) {
+        navegador = "Safari";
+    } else if (userAgent.indexOf("Edg") > -1) {
+        navegador = "Edge";
+    }
+    
+    console.log(`🌐 Navegador detectado: ${navegador}`);
+    return navegador;
+}
+
+// Inicialización multinavegador
+window.addEventListener('load', function() {
+    console.log('🚀 Página completamente cargada');
+    detectarNavegador();
+    
+    // Asegurar que Leaflet esté completamente cargado
+    if (typeof L !== 'undefined') {
+        console.log('✅ Leaflet está disponible');
+    } else {
+        console.log('⚠️ Leaflet no está disponible, reintentando...');
+        // Intentar cargar Leaflet manualmente
+        if (!document.querySelector('script[src*="leaflet"]')) {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            script.onload = function() {
+                console.log('✅ Leaflet cargado manualmente');
+                // Si ya estamos en el dashboard, inicializar mapa
+                if (elementoVisible('dashboard-content')) {
+                    setTimeout(initMap, 500);
+                }
+            };
+            document.head.appendChild(script);
+        }
+    }
+});
+
+// Mensaje de bienvenida
+console.log('🎉 Sistema de Control Subte BA - Compatible con todos los navegadores');
+console.log('🔑 Clave de acceso: SUBTE2024 (o dejar vacío)');
 // ========== INICIALIZACIÓN AUTOMÁTICA ==========
 console.log('✅ Sistema de Control Subtes BA - funciones.js cargado');
 
