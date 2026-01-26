@@ -1,4 +1,4 @@
-v// funciones.js - VERSIÓN CORREGIDA Y FUNCIONAL
+// funciones.js - VERSIÓN CORREGIDA Y FUNCIONAL
 
 // ========== VARIABLES GLOBALES ==========
 let datosEstaciones = [];
@@ -7,9 +7,20 @@ let marcadores = [];
 let modoFiestaActivo = null;
 let intervaloFiesta = null;
 
-// ========== SISTEMA DE LOGIN ==========
+// ========== SISTEMA DE LOGIN MEJORADO ==========
 function checkLogin() {
-    const password = document.getElementById('password').value;
+    const passwordInput = document.getElementById('password');
+    
+    // Si no existe el campo de password, acceso directo
+    if (!passwordInput) {
+        console.log('⚠️ Campo de password no encontrado - Acceso directo');
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard-content').style.display = 'block';
+        inicializarSistema();
+        return;
+    }
+    
+    const password = passwordInput.value;
     
     // Contraseña de demo o vacío para acceso rápido
     if (password === 'SUBTE2024' || password === '') {
@@ -18,6 +29,8 @@ function checkLogin() {
         inicializarSistema();
     } else {
         alert('❌ Contraseña incorrecta\n\nPara demo use: SUBTE2024\nO deje vacío para acceso rápido');
+        passwordInput.value = '';
+        passwordInput.focus();
     }
 }
 
@@ -29,7 +42,11 @@ function logout() {
     
     document.getElementById('dashboard-content').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('password').value = '';
+    
+    const passwordInput = document.getElementById('password');
+    if (passwordInput) {
+        passwordInput.value = '';
+    }
 }
 
 // ========== INICIALIZACIÓN DEL SISTEMA ==========
@@ -43,13 +60,7 @@ function inicializarSistema() {
     actualizarEstadisticasConexion();
     
     // 3. Inicializar mapa
-    setTimeout(() => {
-        if (typeof L !== 'undefined') {
-            initMap();
-        } else {
-            console.log('⚠️ Leaflet no está cargado');
-        }
-    }, 1000);
+    inicializarMapaSiEsPosible();
     
     // 4. Verificar modo fiesta activo
     verificarModoFiestaActivo();
@@ -151,6 +162,58 @@ function filtrarMapa(tipo) {
 }
 
 // ========== MAPA INTERACTIVO ==========
+function inicializarMapaSiEsPosible() {
+    console.log('🗺️ Verificando condiciones para mapa...');
+    
+    // Verificar si el contenedor del mapa existe
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) {
+        console.log('❌ No se encontró el contenedor del mapa');
+        return;
+    }
+    
+    // Verificar si Leaflet está cargado
+    if (typeof L === 'undefined') {
+        console.log('⚠️ Leaflet no está cargado, cargando...');
+        cargarLeaflet();
+        return;
+    }
+    
+    // Inicializar el mapa
+    initMap();
+}
+
+function cargarLeaflet() {
+    // Verificar si ya estamos cargando Leaflet
+    if (document.querySelector('script[src*="leaflet"]')) {
+        console.log('⚠️ Leaflet ya se está cargando...');
+        return;
+    }
+    
+    console.log('📦 Cargando Leaflet CSS...');
+    // Cargar CSS
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+    
+    console.log('📦 Cargando Leaflet JS...');
+    // Cargar JS
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = function() {
+        console.log('✅ Leaflet cargado correctamente');
+        // Esperar un momento para asegurar que todo esté listo
+        setTimeout(initMap, 500);
+    };
+    script.onerror = function() {
+        console.log('❌ Error al cargar Leaflet');
+        mostrarNotificacion('❌ Error al cargar el mapa', '#e74c3c');
+    };
+    
+    document.head.appendChild(script);
+}
+
 function initMap() {
     console.log('🗺️ Inicializando mapa...');
     
@@ -161,18 +224,29 @@ function initMap() {
         return;
     }
     
-    // Crear mapa centrado en Buenos Aires
-    mapa = L.map('map').setView([-34.6037, -58.3816], 13);
+    // Verificar si Leaflet está cargado
+    if (typeof L === 'undefined') {
+        console.log('❌ Leaflet no está disponible');
+        return;
+    }
     
-    // Agregar capa de OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-    }).addTo(mapa);
-    
-    // Agregar marcadores
-    actualizarMarcadores();
-    
-    console.log('✅ Mapa inicializado correctamente');
+    try {
+        // Crear mapa centrado en Buenos Aires
+        mapa = L.map('map').setView([-34.6037, -58.3816], 13);
+        
+        // Agregar capa de OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(mapa);
+        
+        // Agregar marcadores
+        actualizarMarcadores();
+        
+        console.log('✅ Mapa inicializado correctamente');
+    } catch (error) {
+        console.log('❌ Error al inicializar mapa:', error);
+        mostrarNotificacion('❌ Error al mostrar el mapa', '#e74c3c');
+    }
 }
 
 function actualizarMarcadores() {
@@ -718,171 +792,3 @@ function actualizarDatosAutomaticamente() {
     // Simular cambios automáticos en los datos
     if (!datosEstaciones || datosEstaciones.length === 0) return;
     
-    datosEstaciones.forEach(estacion => {
-        // 10% de probabilidad de cambio de estado
-        if (Math.random() < 0.1) {
-            if (estacion.conexion.estado === 'conectado') {
-                estacion.conexion.estado = 'desconectado';
-                if (estacion.conexion.wifi) {
-                    estacion.conexion.wifi.señal = 0;
-                }
-            } else {
-                estacion.conexion.estado = 'conectado';
-                if (estacion.conexion.wifi) {
-                    estacion.conexion.wifi.señal = 60 + Math.random() * 40;
-                }
-            }
-        }
-        
-        // Variar batería si está conectada
-        if (estacion.conexion.estado === 'conectado' && estacion.dispositivo) {
-            estacion.dispositivo.bateria += (Math.random() * 4 - 2);
-            estacion.dispositivo.bateria = Math.max(0, Math.min(100, estacion.dispositivo.bateria));
-            
-            // Actualizar estado según batería
-            if (estacion.dispositivo.bateria > 70) {
-                estacion.dispositivo.estado = 'normal';
-            } else if (estacion.dispositivo.bateria > 40) {
-                estacion.dispositivo.estado = 'alerta';
-            } else {
-                estacion.dispositivo.estado = 'critico';
-            }
-        }
-    });
-    
-    // Actualizar estadísticas y marcadores
-    actualizarEstadisticasConexion();
-    if (mapa) actualizarMarcadores();
-}
-// ========== COMPATIBILIDAD MULTINAVEGADOR ==========
-
-// Función para verificar si un elemento existe y es visible
-function elementoVisible(id) {
-    const elemento = document.getElementById(id);
-    return elemento && elemento.offsetParent !== null;
-}
-
-// Función de login mejorada
-function loginMejorado() {
-    const password = document.getElementById('password');
-    
-    if (!password) {
-        console.log('⚠️ Campo de password no encontrado');
-        // Acceso directo si no hay campo de password
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('dashboard-content').style.display = 'block';
-        inicializarSistema();
-        return;
-    }
-    
-    const passValue = password.value;
-    if (passValue === 'SUBTE2024' || passValue === '') {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('dashboard-content').style.display = 'block';
-        inicializarSistema();
-    } else {
-        alert('❌ Contraseña incorrecta\n\nPara demo use: SUBTE2024\nO deje vacío para acceso rápido');
-        password.value = '';
-        password.focus();
-    }
-}
-
-// Reemplazar la función original checkLogin
-window.checkLogin = loginMejorado;
-
-// Evento para permitir login con Enter
-document.addEventListener('DOMContentLoaded', function() {
-    const passwordInput = document.getElementById('password');
-    const loginButton = document.querySelector('button[onclick*="checkLogin"]');
-    
-    if (passwordInput) {
-        passwordInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                loginMejorado();
-            }
-        });
-    }
-    
-    if (loginButton) {
-        // Reemplazar el onclick original
-        loginButton.onclick = loginMejorado;
-    }
-    
-    // Verificar si ya estamos logueados (en recarga de página)
-    setTimeout(function() {
-        const loginScreen = document.getElementById('login-screen');
-        const dashboard = document.getElementById('dashboard-content');
-        
-        if (loginScreen && dashboard && loginScreen.style.display !== 'none') {
-            // Mostrar mensaje de ayuda
-            console.log('✅ Sistema listo. Clave: SUBTE2024 o vacío');
-        }
-    }, 1000);
-});
-
-// ========== DETECCIÓN DE NAVEGADOR ==========
-function detectarNavegador() {
-    const userAgent = navigator.userAgent;
-    let navegador = 'Desconocido';
-    
-    if (userAgent.indexOf("Chrome") > -1) {
-        navegador = "Chrome";
-    } else if (userAgent.indexOf("Firefox") > -1) {
-        navegador = "Firefox";
-    } else if (userAgent.indexOf("Safari") > -1) {
-        navegador = "Safari";
-    } else if (userAgent.indexOf("Edg") > -1) {
-        navegador = "Edge";
-    }
-    
-    console.log(`🌐 Navegador detectado: ${navegador}`);
-    return navegador;
-}
-
-// Inicialización multinavegador
-window.addEventListener('load', function() {
-    console.log('🚀 Página completamente cargada');
-    detectarNavegador();
-    
-    // Asegurar que Leaflet esté completamente cargado
-    if (typeof L !== 'undefined') {
-        console.log('✅ Leaflet está disponible');
-    } else {
-        console.log('⚠️ Leaflet no está disponible, reintentando...');
-        // Intentar cargar Leaflet manualmente
-        if (!document.querySelector('script[src*="leaflet"]')) {
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-            script.onload = function() {
-                console.log('✅ Leaflet cargado manualmente');
-                // Si ya estamos en el dashboard, inicializar mapa
-                if (elementoVisible('dashboard-content')) {
-                    setTimeout(initMap, 500);
-                }
-            };
-            document.head.appendChild(script);
-        }
-    }
-});
-
-// Mensaje de bienvenida
-console.log('🎉 Sistema de Control Subte BA - Compatible con todos los navegadores');
-console.log('🔑 Clave de acceso: SUBTE2024 (o dejar vacío)');
-// ========== INICIALIZACIÓN AUTOMÁTICA ==========
-console.log('✅ Sistema de Control Subtes BA - funciones.js cargado');
-
-// Verificar si Leaflet está cargado
-if (!document.querySelector('link[href*="leaflet"]')) {
-    console.log('📦 Cargando Leaflet CSS...');
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-    
-    // También cargar el JS si no está
-    if (!window.L) {
-        console.log('📦 Cargando Leaflet JS...');
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        script.onload = () => {
-            console.log('✅ Leaflet cargado, inicializando mapa...');
