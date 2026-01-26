@@ -1,4 +1,4 @@
-// funciones.js - VERSIÓN CORREGIDA Y FUNCIONAL
+// funciones.js - VERSIÓN COMPLETA Y CORREGIDA
 
 // ========== VARIABLES GLOBALES ==========
 let datosEstaciones = [];
@@ -760,35 +760,3 @@ function mostrarNotificacion(mensaje, color) {
         font-weight: bold;
         animation: slideIn 0.5s;
     `;
-    
-    notif.textContent = mensaje;
-    
-    // Botón para cerrar
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = '×';
-    closeBtn.style.cssText = `
-        margin-left: 15px;
-        background: transparent;
-        border: none;
-        color: white;
-        font-size: 1.2rem;
-        cursor: pointer;
-        padding: 0 5px;
-    `;
-    closeBtn.onclick = () => notif.remove();
-    
-    notif.appendChild(closeBtn);
-    document.body.appendChild(notif);
-    
-    // Auto-eliminar después de 5 segundos
-    setTimeout(() => {
-        if (notif.parentElement) {
-            notif.remove();
-        }
-    }, 5000);
-}
-
-function actualizarDatosAutomaticamente() {
-    // Simular cambios automáticos en los datos
-    if (!datosEstaciones || datosEstaciones.length === 0) return;
-    
