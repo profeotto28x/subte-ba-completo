@@ -1,4 +1,4 @@
-// funciones.js - VERSIÓN CORREGIDA Y FUNCIONAL
+v// funciones.js - VERSIÓN CORREGIDA Y FUNCIONAL
 
 // ========== VARIABLES GLOBALES ==========
 let datosEstaciones = [];
@@ -353,7 +353,7 @@ function mostrarPanelFiestas() {
                 </div>
                 
                 <div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 10px;">
-                    <h3 style="color: #1a237e; margin-bottom: 15px;">⚙️ CONFIGURACIÓN</h3>
+                    <h3 style="color: #1a237e; margin-bottom: 10px;">⚙️ CONFIGURACIÓN</h3>
                     
                     <div style="margin: 15px 0;">
                         <label style="display: block; margin-bottom: 5px; color: #5c6bc0;">Frecuencia: <span id="freqValue">1</span> Hz</label>
@@ -754,6 +754,7 @@ function actualizarDatosAutomaticamente() {
     actualizarEstadisticasConexion();
     if (mapa) actualizarMarcadores();
 }
+
 // ========== INICIALIZACIÓN AUTOMÁTICA ==========
 console.log('✅ Sistema de Control Subtes BA - funciones.js cargado');
 
@@ -772,31 +773,3 @@ if (!document.querySelector('link[href*="leaflet"]')) {
         script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
         script.onload = () => {
             console.log('✅ Leaflet cargado, inicializando mapa...');
-            // Esperar a que el DOM esté listo
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => {
-                    if (document.getElementById('dashboard-content').style.display !== 'none') {
-                        initMap();
-                    }
-                });
-            } else {
-                if (document.getElementById('dashboard-content').style.display !== 'none') {
-                    initMap();
-                }
-            }
-        };
-        document.head.appendChild(script);
-    }
-}
-
-// Inicialización automática si el dashboard ya está visible
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('📋 DOM cargado, verificando estado...');
-    
-    // Si el dashboard ya está visible (ej: recarga de página)
-    if (document.getElementById('dashboard-content') && 
-        document.getElementById('dashboard-content').style.display !== 'none') {
-        console.log('🔍 Dashboard visible, inicializando sistema...');
-        setTimeout(inicializarSistema, 500);
-    }
-});
