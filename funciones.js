@@ -754,7 +754,6 @@ function actualizarDatosAutomaticamente() {
     actualizarEstadisticasConexion();
     if (mapa) actualizarMarcadores();
 }
-
 // ========== INICIALIZACIÓN AUTOMÁTICA ==========
 console.log('✅ Sistema de Control Subtes BA - funciones.js cargado');
 
@@ -763,4 +762,41 @@ if (!document.querySelector('link[href*="leaflet"]')) {
     console.log('📦 Cargando Leaflet CSS...');
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+    
+    // También cargar el JS si no está
+    if (!window.L) {
+        console.log('📦 Cargando Leaflet JS...');
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.onload = () => {
+            console.log('✅ Leaflet cargado, inicializando mapa...');
+            // Esperar a que el DOM esté listo
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    if (document.getElementById('dashboard-content').style.display !== 'none') {
+                        initMap();
+                    }
+                });
+            } else {
+                if (document.getElementById('dashboard-content').style.display !== 'none') {
+                    initMap();
+                }
+            }
+        };
+        document.head.appendChild(script);
+    }
+}
+
+// Inicialización automática si el dashboard ya está visible
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📋 DOM cargado, verificando estado...');
+    
+    // Si el dashboard ya está visible (ej: recarga de página)
+    if (document.getElementById('dashboard-content') && 
+        document.getElementById('dashboard-content').style.display !== 'none') {
+        console.log('🔍 Dashboard visible, inicializando sistema...');
+        setTimeout(inicializarSistema, 500);
+    }
+});
