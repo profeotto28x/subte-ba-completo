@@ -17,7 +17,88 @@
             background: linear-gradient(135deg, #1a237e 0%, #311b92 100%);
             min-height: 100vh;
             color: #333;
-        }
+       /* ========== ESTILOS PARA CONFIGURACIÓN WIFI ========== */
+
+.wifi-config-btn {
+    padding: 8px 15px;
+    background: #1a237e;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-top: 5px;
+    width: 100%;
+}
+
+.wifi-config-btn:hover {
+    background: #311b92;
+}
+
+.qr-code {
+    width: 200px;
+    height: 200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.network-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: white;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+    transition: transform 0.2s;
+}
+
+.network-item:hover {
+    transform: translateX(5px);
+}
+
+.network-signal {
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.signal-excelente { background: #2ecc71; color: white; }
+.signal-buena { background: #f39c12; color: white; }
+.signal-debil { background: #e74c3c; color: white; }
+
+.config-section {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.config-section h4 {
+    color: #1a237e;
+    margin-bottom: 10px;
+}
+
+/* Mejorar el modal existente */
+.modal-content {
+    animation: modalAppear 0.3s ease-out;
+}
+
+@keyframes modalAppear {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+} }
         
         /* PANTALLA LOGIN */
         #login-screen {
