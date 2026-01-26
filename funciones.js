@@ -464,4 +464,588 @@ function mostrarConfigWifiEstacion(estacionId) {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 25px 0;">
                     <!-- Información actual -->
                     <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
-                        <h3 style="color: #5c6bc0; margin-bottom: 15px;">};
+                        <h3 style="color: #5c6bc0; margin-bottom: 15px;">// ========== SISTEMA DE CONFIGURACIÓN WIFI ESP32 ==========
+
+function mostrarConfigWifiEstacion(estacionId) {
+    const estacion = datosEstaciones.find(e => e.id === estacionId);
+    if (!estacion) return;
+    
+    const modalHTML = `
+        <div class="modal-backdrop">
+            <div class="modal-content" style="max-width: 600px;">
+                <h2 style="color: #1a237e; text-align: center;">📡 CONFIGURAR WIFI - ${estacion.nombre}</h2>
+                <p style="text-align: center; color: #666; margin-bottom: 25px;">Línea ${estacion.linea} • ID: ${estacion.id}</p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 25px 0;">
+                    <!-- Información actual -->
+                    <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                        <h3 style="color: #5c6bc0; margin-bottom: 15px;">📊 ESTADO ACTUAL</h3>
+                        <p><strong>Conexión:</strong> <span style="color: ${estacion.conexion.estado === 'conectado' ? '#2ecc71' : '#e74c3c'}">${estacion.conexion.estado.toUpperCase()}</span></p>
+                        <p><strong>Señal WiFi:</strong> ${estacion.conexion.wifi.señal}%</p>
+                        <p><strong>IP asignada:</strong> ${estacion.conexion.wifi.ip || 'No asignada'}</p>
+                        <p><strong>Batería:</strong> ${estacion.dispositivo.bateria}%</p>
+                        <p><strong>SSID actual:</strong> ${estacion.conexion.wifi.ssid}</p>
+                    </div>
+                    
+                    <!-- Configuración -->
+                    <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                        <h3 style="color: #5c6bc0; margin-bottom: 15px;">⚙️ NUEVA CONFIGURACIÓN</h3>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; color: #5c6bc0;">Nombre red (SSID)</label>
+                            <input type="text" id="wifi-ssid" placeholder="Ej: MiCasa_WiFi" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px;" value="${estacion.conexion.wifi.ssid}">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; color: #5c6bc0;">Contraseña WiFi</label>
+                            <input type="password" id="wifi-password" placeholder="Ingrese la contraseña" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; color: #5c6bc0;">Modo conexión</label>
+                            <select id="wifi-mode" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
+                                <option value="auto">Auto-conectar</option>
+                                <option value="manual">Manual (solo cuando hay comandos)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- CÓDIGO QR PARA ESCANEAR -->
+                <div style="text-align: center; margin: 25px 0; padding: 20px; background: #fff; border-radius: 10px; border: 2px dashed #ddd;">
+                    <h3 style="color: #1a237e; margin-bottom: 15px;">📱 CÓDIGO QR PARA ESP32</h3>
+                    <div id="qrcode-container" style="display: inline-block; padding: 15px; background: white; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.1);">
+                        <div id="qrcode-${estacionId}" style="width: 200px; height: 200px; margin: 0 auto;"></div>
+                    </div>
+                    <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">Escanear con celular para enviar configuración al ESP32</p>
+                </div>
+                
+                <!-- BOTONES DE ACCIÓN -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 25px;">
+                    <button onclick="probarConexionWifi('${estacionId}')" style="padding: 12px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        🔍 Probar conexión
+                    </button>
+                    
+                    <button onclick="guardarConfigWifi('${estacionId}')" style="padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        💾 Guardar configuración
+                    </button>
+                    
+                    <button onclick="enviarConfigESP32('${estacionId}')" style="padding: 12px; background: #9b59b6; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        📤 Enviar a ESP32
+                    </button>
+                </div>
+                
+                <!-- REDES DISPONIBLES -->
+                <div style="margin-top: 30px; padding: 20px; background: #f0f8ff; border-radius: 10px;">
+                    <h3 style="color: #1a237e; margin-bottom: 15px;">📶 REDES WIFI DISPONIBLES CERCA</h3>
+                    <div id="redes-disponibles-${estacionId}" style="max-height: 200px; overflow-y: auto;">
+                        <p style="text-align: center; color: #666; padding: 20px;">Buscando redes disponibles...</p>
+                    </div>
+                    <button onclick="escanearRedes('${estacionId}')" style="margin-top: 15px; padding: 10px 20px; background: #1a237e; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%;">
+                        🔄 Escanear redes nuevamente
+                    </button>
+                </div>
+                
+                <!-- BOTÓN CERRAR -->
+                <div style="text-align: center; margin-top: 30px;">
+                    <button onclick="cerrarModalWifi()" style="padding: 12px 40px; background: #666; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        ❌ Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Crear y mostrar modal
+    const modal = document.createElement('div');
+    modal.id = 'modal-wifi';
+    modal.innerHTML = modalHTML;
+    document.body.appendChild(modal);
+    
+    // Generar código QR
+    generarQRCode(estacionId, estacion);
+    
+    // Escanear redes disponibles
+    setTimeout(() => escanearRedes(estacionId), 500);
+}
+
+function cerrarModalWifi() {
+    const modal = document.getElementById('modal-wifi');
+    if (modal) modal.remove();
+}
+
+function generarQRCode(estacionId, estacion) {
+    const qrContainer = document.getElementById(`qrcode-${estacionId}`);
+    if (!qrContainer) return;
+    
+    // Datos para el código QR
+    const datosWifi = {
+        estacion: estacion.id,
+        nombre: estacion.nombre,
+        ssid: estacion.conexion.wifi.ssid,
+        timestamp: new Date().toISOString(),
+        accion: "config_wifi"
+    };
+    
+    const datosString = JSON.stringify(datosWifi);
+    
+    // Generar código QR simple (sin librería externa para demo)
+    qrContainer.innerHTML = `
+        <div style="width: 200px; height: 200px; display: grid; grid-template-columns: repeat(20, 1fr); grid-template-rows: repeat(20, 1fr);">
+            ${Array.from({length: 400}).map((_, i) => {
+                const row = Math.floor(i / 20);
+                const col = i % 20;
+                // Patrón simple de QR (en producción usar librería como qrcode.js)
+                const shouldFill = (row + col) % 3 === 0 || 
+                                  (row * col) % 7 === 0 ||
+                                  (row + estacionId.charCodeAt(0)) % 5 === 0;
+                return `<div style="background: ${shouldFill ? '#000' : '#fff'}; border: 1px solid #f0f0f0;"></div>`;
+            }).join('')}
+        </div>
+        <div style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: #666;">
+            ID: ${estacion.id.substring(0, 8)}
+        </div>
+    `;
+}
+
+function escanearRedes(estacionId) {
+    const container = document.getElementById(`redes-disponibles-${estacionId}`);
+    if (!container) return;
+    
+    // Simular escaneo de redes (en producción sería una API real)
+    const redesSimuladas = [
+        { nombre: 'Fibertel_WiFi_2.4G', señal: 85, seguridad: 'WPA2', canal: 6 },
+        { nombre: 'Personal_WiFi', señal: 72, seguridad: 'WPA2', canal: 11 },
+        { nombre: 'SUBTE_ADMIN', señal: 95, seguridad: 'WPA2-Enterprise', canal: 1 },
+        { nombre: 'Casa_Vecina', señal: 45, seguridad: 'WPA', canal: 3 },
+        { nombre: 'Libre_BA', señal: 60, seguridad: 'Abierta', canal: 9 }
+    ];
+    
+    container.innerHTML = redesSimuladas.map(red => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 8px; background: white; border-radius: 8px; border-left: 4px solid ${red.señal > 70 ? '#2ecc71' : red.señal > 40 ? '#f39c12' : '#e74c3c'};">
+            <div>
+                <strong>${red.nombre}</strong><br>
+                <small>Canal ${red.canal} • ${red.seguridad}</small>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-weight: bold; color: ${red.señal > 70 ? '#2ecc71' : red.señal > 40 ? '#f39c12' : '#e74c3c'}">
+                    ${red.señal}%
+                </div>
+                <button onclick="seleccionarRed('${estacionId}', '${red.nombre}')" style="margin-top: 5px; padding: 5px 10px; background: #1a237e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                    Seleccionar
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function seleccionarRed(estacionId, ssid) {
+    document.getElementById('wifi-ssid').value = ssid;
+    mostrarNotificacion(`✅ Red ${ssid} seleccionada`, '#2ecc71');
+}
+
+function probarConexionWifi(estacionId) {
+    const ssid = document.getElementById('wifi-ssid').value;
+    const password = document.getElementById('wifi-password').value;
+    
+    if (!ssid) {
+        mostrarNotificacion('❌ Ingrese un SSID para probar', '#e74c3c');
+        return;
+    }
+    
+    // Simular prueba de conexión
+    mostrarNotificacion(`🔍 Probando conexión a ${ssid}...`, '#3498db');
+    
+    setTimeout(() => {
+        const exito = Math.random() > 0.3; // 70% de éxito
+        if (exito) {
+            mostrarNotificacion(`✅ Conexión exitosa a ${ssid}`, '#2ecc71');
+            
+            // Actualizar estado en la estación
+            const estacion = datosEstaciones.find(e => e.id === estacionId);
+            if (estacion) {
+                estacion.conexion.estado = 'conectado';
+                estacion.conexion.wifi.señal = 80 + Math.random() * 20;
+                estacion.conexion.wifi.ip = `192.168.1.${Math.floor(100 + Math.random() * 155)}`;
+                actualizarEstadisticasConexion();
+                if (mapa) actualizarMarcadores();
+            }
+        } else {
+            mostrarNotificacion(`❌ No se pudo conectar a ${ssid}`, '#e74c3c');
+        }
+    }, 2000);
+}
+
+function guardarConfigWifi(estacionId) {
+    const ssid = document.getElementById('wifi-ssid').value;
+    const password = document.getElementById('wifi-password').value;
+    const modo = document.getElementById('wifi-mode').value;
+    
+    if (!ssid || !password) {
+        mostrarNotificacion('❌ Complete SSID y contraseña', '#e74c3c');
+        return;
+    }
+    
+    // Guardar en la estación
+    const estacion = datosEstaciones.find(e => e.id === estacionId);
+    if (estacion) {
+        estacion.conexion.wifi.ssid = ssid;
+        estacion.conexion.wifi.modo = modo;
+        
+        // Guardar en localStorage para persistencia
+        const configsGuardadas = JSON.parse(localStorage.getItem('subte-wifi-configs')) || {};
+        configsGuardadas[estacionId] = {
+            ssid: ssid,
+            modo: modo,
+            guardado: new Date().toISOString()
+        };
+        localStorage.setItem('subte-wifi-configs', JSON.stringify(configsGuardadas));
+        
+        mostrarNotificacion(`✅ Configuración WiFi guardada para ${estacion.nombre}`, '#2ecc71');
+    }
+}
+
+function enviarConfigESP32(estacionId) {
+    const ssid = document.getElementById('wifi-ssid').value;
+    const password = document.getElementById('wifi-password').value;
+    
+    if (!ssid || !password) {
+        mostrarNotificacion('❌ Complete SSID y contraseña', '#e74c3c');
+        return;
+    }
+    
+    // Simular envío a ESP32
+    mostrarNotificacion('📤 Enviando configuración al ESP32...', '#9b59b6');
+    
+    // Datos que se enviarían al ESP32
+    const datosESP32 = {
+        comando: "CONFIG_WIFI",
+        estacion: estacionId,
+        wifi: {
+            ssid: ssid,
+            password: password,
+            intentos_reconexion: 10,
+            timeout: 30
+        },
+        timestamp: new Date().toISOString()
+    };
+    
+    console.log('Datos para ESP32:', datosESP32);
+    
+    // Simular respuesta del ESP32 después de 2 segundos
+    setTimeout(() => {
+        const exito = Math.random() > 0.2; // 80% de éxito
+        if (exito) {
+            mostrarNotificacion('✅ Configuración recibida por ESP32', '#2ecc71');
+            
+            // Mostrar código de ejemplo para Arduino
+            mostrarCodigoArduino(ssid, password, estacionId);
+        } else {
+            mostrarNotificacion('❌ Error al comunicar con ESP32', '#e74c3c');
+        }
+    }, 2000);
+}
+
+function mostrarCodigoArduino(ssid, password, estacionId) {
+    const codigoHTML = `
+        <div style="margin-top: 20px; padding: 20px; background: #2c3e50; border-radius: 10px; color: white; font-family: monospace; font-size: 0.9rem; overflow-x: auto;">
+            <h4 style="color: #3498db; margin-bottom: 10px;">📟 CÓDIGO ARDUINO PARA ESP32</h4>
+            <pre style="margin: 0; white-space: pre-wrap;">
+// Configuración WiFi para ${estacionId}
+const char* SSID = "${ssid}";
+const char* PASSWORD = "${password}";
+
+void setup() {
+    Serial.begin(115200);
+    
+    // Conectar a WiFi
+    WiFi.begin(SSID, PASSWORD);
+    Serial.print("Conectando a ");
+    Serial.println(SSID);
+    
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    
+    Serial.println("\\n¡Conectado!");
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
+}
+
+void loop() {
+    // Tu código aquí
+    delay(1000);
+}
+            </pre>
+            <p style="margin-top: 10px; color: #95a5a6; font-size: 0.8rem;">
+                Copiar este código en el Arduino IDE para programar el ESP32
+            </p>
+        </div>
+    `;
+    
+    // Agregar al modal si existe
+    const modal = document.getElementById('modal-wifi');
+    if (modal) {
+        const container = modal.querySelector('.modal-content');
+        if (container) {
+            // Buscar si ya existe una sección de código
+            let codigoSection = container.querySelector('.codigo-arduino-section');
+            if (!codigoSection) {
+                codigoSection = document.createElement('div');
+                codigoSection.className = 'codigo-arduino-section';
+                container.appendChild(codigoSection);
+            }
+            codigoSection.innerHTML = codigoHTML;
+        }
+    }
+}
+
+// Modificar la función mostrarDetallesEstacion para agregar botón WiFi
+// REEMPLAZÁ la función mostrarDetallesEstacion con esta versión mejorada:
+
+function mostrarDetallesEstacion(estacionId) {
+    const estacion = datosEstaciones.find(e => e.id === estacionId);
+    if (!estacion) return;
+    
+    const detallesHTML = `
+        <div style="min-width: 300px; padding: 15px;">
+            <h3 style="color: #1a237e; margin-bottom: 10px;">🚇 ${estacion.nombre}</h3>
+            <p><strong>📍 Línea:</strong> ${estacion.linea}</p>
+            <p><strong>🔌 Estado:</strong> <span style="color: ${estacion.conexion.estado === 'conectado' ? '#2ecc71' : '#e74c3c'}">${estacion.conexion.estado.toUpperCase()}</span></p>
+            <p><strong>📶 WiFi:</strong> ${estacion.conexion.wifi.señal}%</p>
+            <p><strong>🔋 Batería:</strong> ${estacion.dispositivo.bateria}%</p>
+            <p><strong>🌡️ Temp:</strong> ${estacion.dispositivo.temperatura.toFixed(1)}°C</p>
+            <p><strong>📡 Red:</strong> ${estacion.conexion.wifi.ssid}</p>
+            <p><strong>🏠 IP:</strong> ${estacion.conexion.wifi.ip || 'No asignada'}</p>
+            
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button onclick="mostrarConfigWifiEstacion('${estacionId}')" style="flex: 1; padding: 10px; background: #1a237e; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    📡 Configurar WiFi
+                </button>
+                <button onclick="controlarLucesEstacion('${estacionId}')" style="flex: 1; padding: 10px; background: #f39c12; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    💡 Controlar Luces
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Mostrar como alerta personalizada
+    const alertDiv = document.createElement('div');
+    alertDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 0;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        z-index: 1000;
+        max-width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    `;
+    
+    alertDiv.innerHTML = detallesHTML;
+    
+    // Botón cerrar
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: transparent;
+        border: none;
+        font-size: 1.5rem;
+        color: #666;
+        cursor: pointer;
+        padding: 5px 10px;
+    `;
+    closeBtn.onclick = () => alertDiv.remove();
+    
+    // Fondo oscuro
+    const backdrop = document.createElement('div');
+    backdrop.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 999;
+    `;
+    backdrop.onclick = () => {
+        alertDiv.remove();
+        backdrop.remove();
+    };
+    
+    alertDiv.appendChild(closeBtn);
+    document.body.appendChild(backdrop);
+    document.body.appendChild(alertDiv);
+}
+
+function controlarLucesEstacion(estacionId) {
+    const estacion = datosEstaciones.find(e => e.id === estacionId);
+    if (!estacion) return;
+    
+    const estaEncendida = estacion.iluminacion.encendida;
+    
+    const controlHTML = `
+        <div style="min-width: 300px; padding: 20px; text-align: center;">
+            <h3 style="color: #1a237e; margin-bottom: 15px;">💡 Control de Luces</h3>
+            <p style="margin-bottom: 20px;">${estacion.nombre} - Línea ${estacion.linea}</p>
+            
+            <div style="font-size: 4rem; margin: 20px 0; color: ${estaEncendida ? '#f39c12' : '#95a5a6'}">
+                ${estaEncendida ? '💡' : '🌙'}
+            </div>
+            
+            <p style="font-weight: bold; color: ${estaEncendida ? '#f39c12' : '#95a5a6'}">
+                ${estaEncendida ? 'LUCES ENCENDIDAS' : 'LUCES APAGADAS'}
+            </p>
+            
+            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                <button onclick="encenderLuzEstacion('${estacionId}')" style="flex: 1; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                    🔆 ENCENDER
+                </button>
+                <button onclick="apagarLuzEstacion('${estacionId}')" style="flex: 1; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                    🌙 APAGAR
+                </button>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button onclick="ponerEnModoAuto('${estacionId}')" style="width: 100%; padding: 10px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                    🤖 MODO AUTOMÁTICO
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Mostrar modal similar al anterior
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 0;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        z-index: 1001;
+    `;
+    modal.innerHTML = controlHTML;
+    
+    const backdrop = document.createElement('div');
+    backdrop.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+    `;
+    backdrop.onclick = () => {
+        modal.remove();
+        backdrop.remove();
+    };
+    
+    document.body.appendChild(backdrop);
+    document.body.appendChild(modal);
+}
+
+function encenderLuzEstacion(estacionId) {
+    const estacion = datosEstaciones.find(e => e.id === estacionId);
+    if (estacion) {
+        estacion.iluminacion.encendida = true;
+        estacion.iluminacion.modo = 'manual';
+        mostrarNotificacion(`💡 Luces encendidas en ${estacion.nombre}`, '#f39c12');
+    }
+    // Cerrar modal automáticamente
+    document.querySelectorAll('div[style*="fixed"]').forEach(el => {
+        if (el.innerHTML.includes('Control de Luces')) {
+            el.remove();
+            document.querySelector('div[style*="background: rgba(0,0,0,0.5)"]').remove();
+        }
+    });
+}
+
+function apagarLuzEstacion(estacionId) {
+    const estacion = datosEstaciones.find(e => e.id === estacionId);
+    if (estacion) {
+        estacion.iluminacion.encendida = false;
+        estacion.iluminacion.modo = 'manual';
+        mostrarNotificacion(`🌙 Luces apagadas en ${estacion.nombre}`, '#95a5a6');
+    }
+    // Cerrar modal
+    document.querySelectorAll('div[style*="fixed"]').forEach(el => {
+        if (el.innerHTML.includes('Control de Luces')) {
+            el.remove();
+            document.querySelector('div[style*="background: rgba(0,0,0,0.5)"]').remove();
+        }
+    });
+}
+
+function ponerEnModoAuto(estacionId) {
+    const estacion = datosEstaciones.find(e => e.id === estacionId);
+    if (estacion) {
+        estacion.iluminacion.modo = 'auto';
+        mostrarNotificacion(`🤖 Modo automático activado en ${estacion.nombre}`, '#3498db');
+    }
+    // Cerrar modal
+    document.querySelectorAll('div[style*="fixed"]').forEach(el => {
+        if (el.innerHTML.includes('Control de Luces')) {
+            el.remove();
+            document.querySelector('div[style*="background: rgba(0,0,0,0.5)"]').remove();
+        }
+    });
+}
+
+// Cargar configuraciones guardadas al iniciar
+function cargarConfiguracionesGuardadas() {
+    const configs = JSON.parse(localStorage.getItem('subte-wifi-configs')) || {};
+    Object.keys(configs).forEach(estacionId => {
+        const estacion = datosEstaciones.find(e => e.id === estacionId);
+        if (estacion && configs[estacionId].ssid) {
+            estacion.conexion.wifi.ssid = configs[estacionId].ssid;
+            estacion.conexion.wifi.modo = configs[estacionId].modo || 'auto';
+        }
+    });
+}
+
+// Modificar la función inicializarSistema para cargar configuraciones
+// BUSCÁ esta línea en inicializarSistema:
+//     // 5. Iniciar actualizaciones automáticas
+// Y AGREGÁ esto ANTES:
+
+//     // 5. Cargar configuraciones WiFi guardadas
+//     cargarConfiguracionesGuardadas();
+//     
+//     // 6. Iniciar actualizaciones automáticas
+
+// La función inicializarSistema debería quedar así:
+function inicializarSistema() {
+    // 1. Cargar datos de estaciones
+    cargarDatosEstaciones();
+    
+    // 2. Actualizar estadísticas
+    actualizarEstadisticasConexion();
+    
+    // 3. Inicializar mapa
+    setTimeout(() => {
+        if (typeof L !== 'undefined') {
+            initMap();
+        }
+    }, 1000);
+    
+    // 4. Verificar modo fiesta activo
+    verificarModoFiestaActivo();
+    
+    // 5. Cargar configuraciones WiFi guardadas
+    cargarConfiguracionesGuardadas();
+    
+    // 6. Iniciar actualizaciones automáticas
+    setInterval(actualizarDatosAutomaticamente, 10000);
+}};
