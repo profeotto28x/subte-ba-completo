@@ -450,4 +450,18 @@ window.onload = function() {
         link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
         document.head.appendChild(link);
     }
-};
+// ========== SISTEMA DE CONFIGURACIÓN WIFI ESP32 ==========
+
+function mostrarConfigWifiEstacion(estacionId) {
+    const estacion = datosEstaciones.find(e => e.id === estacionId);
+    if (!estacion) return;
+    
+    const modalHTML = `
+        <div class="modal-backdrop">
+            <div class="modal-content" style="max-width: 600px;">
+                <h2 style="color: #1a237e; text-align: center;">📡 CONFIGURAR WIFI - ${estacion.nombre}</h2>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 25px 0;">
+                    <!-- Información actual -->
+                    <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                        <h3 style="color: #5c6bc0; margin-bottom: 15px;">};
