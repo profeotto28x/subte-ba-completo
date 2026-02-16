@@ -201,6 +201,10 @@ function apagarTodasLasLuces() {
 
 // ========== 🎉 MODO FIESTA SIMPLIFICADO ==========
 function mostrarPanelFiestas() {
+    // Cerrar modal anterior si existe
+    const modalAnterior = document.querySelector('.modal-backdrop');
+    if (modalAnterior) modalAnterior.remove();
+    
     const modal = document.createElement('div');
     modal.className = 'modal-backdrop';
     modal.onclick = () => modal.remove();
@@ -291,11 +295,23 @@ function mostrarPanelFiestas() {
     window.velocidadFiesta = 1;
     
     setTimeout(() => {
-        const btnDuracion = document.querySelector('.duracion-btn[onclick*="60"]');
-        if (btnDuracion) btnDuracion.classList.add('seleccionado');
+        // Seleccionar duración por defecto (1 min)
+        const btnsDuracion = document.querySelectorAll('.duracion-btn');
+        btnsDuracion.forEach(btn => {
+            if (btn.textContent.includes('1 min')) {
+                btn.classList.add('seleccionado');
+            }
+        });
         
-        const btnVelocidad = document.querySelector('.velocidad-btn[onclick*="1"]');
-        if (btnVelocidad) btnVelocidad.classList.add('seleccionado');
+        // Seleccionar velocidad por defecto (Normal)
+        const btnsVelocidad = document.querySelectorAll('.velocidad-btn');
+        btnsVelocidad.forEach(btn => {
+            if (btn.textContent.includes('Normal')) {
+                btn.classList.add('seleccionado');
+            }
+        });
+        
+        document.getElementById('intervaloDisplay').innerText = '1000';
     }, 100);
 }
 
@@ -479,7 +495,7 @@ function mostrarNotificacion(msg, color) {
     n.style.background = color;
     n.textContent = msg;
     document.body.appendChild(n);
-    setTimeout(() => n.remove(), 3000);
+    setTimeout(() => n.remove(), 4000);
 }
 
 // ========== SIMULACIÓN ==========
@@ -509,4 +525,6 @@ style.innerHTML = `
     .close-btn { background:#666; color:white; padding:10px 30px; border:none; border-radius:8px; cursor:pointer; }
     .map-btn.active { background:#2ecc71 !important; }
     .notificacion { position:fixed; top:20px; right:20px; color:white; padding:15px 25px; border-radius:10px; z-index:3000; font-weight:bold; animation:slideIn 0.5s; box-shadow:0 5px 15px rgba(0,0,0,0.3); }
-    @keyframes slideIn {
+    @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+`;
+document.head.appendChild(style);
