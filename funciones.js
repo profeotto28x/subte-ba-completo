@@ -163,21 +163,20 @@ function actualizarMarcadores() {
     marcadores = [];
 
     const filtradas = filtrarEstaciones();
-    console.log(`Mostrando ${filtradas.length} estaciones (filtro: ${filtroActual})`);
     
     filtradas.forEach(e => {
         let color;
         if (e.wifi.señal === 0) {
-            color = '#95a5a6'; // Gris para offline
+            color = '#95a5a6';
         } else if (e.bateria > 70) {
-            color = '#2ecc71'; // Verde para normal
+            color = '#2ecc71';
         } else if (e.bateria > 40) {
-            color = '#f39c12'; // Naranja para alerta
+            color = '#f39c12';
         } else {
-            color = '#e74c3c'; // Rojo para crítico
+            color = '#e74c3c';
         }
 
-        // Ícono como estaba antes (círculo con borde blanco)
+        // ÍCONO CIRCULAR CON BORDE BLANCO Y SOMBRA (COMO AL PRINCIPIO)
         let icono = L.divIcon({
             html: `<div style="background:${color}; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 0 10px rgba(0,0,0,0.3);"></div>`,
             iconSize: [20, 20]
@@ -191,7 +190,7 @@ function actualizarMarcadores() {
                 📶 ${e.wifi.señal > 0 ? e.wifi.señal + '%' : 'Desconectado'}<br>
                 💡 ${e.estadoLuces ? 'ENCENDIDA' : 'APAGADA'}<br>
                 <button onclick="verDetalles('${e.id}')" style="margin-top:5px; padding:5px 10px; background:#1a237e; color:white; border:none; border-radius:4px; cursor:pointer;">
-                    ⚙️ VER DETALLES
+                    ⚙️ CONFIGURAR
                 </button>
             `);
         marcadores.push(m);
@@ -313,11 +312,6 @@ function mostrarPanelFiestas() {
                 <label style="color:#5c6bc0;">Velocidad personalizada (Hz):</label>
                 <input type="number" id="velocidadPersonalizada" min="0.2" max="10" step="0.1" placeholder="Ej: 1.5" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:6px; margin-top:5px;">
             </div>
-            <div style="margin-top:10px; text-align:center;">
-                <span style="background:#1a237e; color:white; padding:5px 15px; border-radius:20px; font-size:0.9rem;">
-                    Intervalo: <span id="intervaloDisplay">1000</span> ms
-                </span>
-            </div>
         </div>
 
         <div style="display:flex; gap:15px; margin-top:25px;">
@@ -336,50 +330,8 @@ function mostrarPanelFiestas() {
     modal.appendChild(contenido);
     document.body.appendChild(modal);
 
-    const style = document.createElement('style');
-    style.innerHTML = `
-        .duracion-btn, .velocidad-btn {
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
-            color: white;
-        }
-        .duracion-btn { background: #1a237e; }
-        .velocidad-btn { background: #5c6bc0; }
-        .duracion-btn:hover, .velocidad-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-        }
-        .duracion-btn.seleccionado, .velocidad-btn.seleccionado {
-            border: 4px solid #f39c12;
-            transform: scale(1.05);
-        }
-    `;
-    document.head.appendChild(style);
-
     window.duracionFiesta = 60;
     window.velocidadFiesta = 1;
-    
-    setTimeout(() => {
-        const btnsDuracion = document.querySelectorAll('.duracion-btn');
-        btnsDuracion.forEach(btn => {
-            if (btn.textContent.includes('1 min')) {
-                btn.classList.add('seleccionado');
-            }
-        });
-        
-        const btnsVelocidad = document.querySelectorAll('.velocidad-btn');
-        btnsVelocidad.forEach(btn => {
-            if (btn.textContent.includes('Normal')) {
-                btn.classList.add('seleccionado');
-            }
-        });
-        
-        document.getElementById('intervaloDisplay').innerText = '1000';
-    }, 100);
 }
 
 function seleccionarDuracion(segundos, btn) {
@@ -394,7 +346,6 @@ function seleccionarVelocidad(velocidad, btn) {
     document.querySelectorAll('.velocidad-btn').forEach(b => b.classList.remove('seleccionado'));
     btn.classList.add('seleccionado');
     document.getElementById('velocidadPersonalizada').value = '';
-    document.getElementById('intervaloDisplay').innerText = Math.round(1000 / velocidad);
 }
 
 function iniciarFiesta() {
@@ -467,7 +418,7 @@ function detenerFiesta() {
     mostrarNotificacion('⏹️ Modo fiesta detenido', '#95a5a6');
 }
 
-// ========== PANEL DE CONTROL INDIVIDUAL ==========
+// ========== 🚀 CONFIGURACIÓN WIFI COMPLETA ==========
 function verDetalles(id) {
     const e = datosEstaciones.find(e => e.id === id);
     if (!e) return;
@@ -483,35 +434,29 @@ function verDetalles(id) {
         <h2 style="color:#1a237e; text-align:center;">⚙️ ${e.nombre}</h2>
         <p style="text-align:center; color:#666;">Línea ${e.linea} | ID: ${e.id}</p>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin:20px 0;">
-            <div class="info-box">
-                <span>🔋 Batería</span>
-                <strong>${e.bateria}%</strong>
-            </div>
-            <div class="info-box">
-                <span>☀️ Paneles</span>
-                <strong>${e.paneles}%</strong>
-            </div>
-            <div class="info-box">
-                <span>⚡ Regulador</span>
-                <strong style="color:${e.regulador === 'OK' ? '#2ecc71' : '#e74c3c'}">${e.regulador}</strong>
-            </div>
-            <div class="info-box">
-                <span>📶 WiFi</span>
-                <strong>${e.wifi.señal > 0 ? e.wifi.señal + '%' : '❌ Desconectado'}</strong>
-            </div>
-        </div>
-
         <div style="background:#f0f8ff; padding:15px; border-radius:10px; margin-bottom:20px;">
-            <p><strong>📡 SSID actual:</strong> ${e.wifi.ssid}</p>
+            <p><strong>🔋 Batería:</strong> ${e.bateria}%</p>
+            <p><strong>☀️ Paneles:</strong> ${e.paneles}%</p>
+            <p><strong>⚡ Regulador:</strong> ${e.regulador}</p>
+            <p><strong>📶 WiFi:</strong> ${e.wifi.señal}%</p>
         </div>
 
-        <div style="background:#f8f9fa; padding:15px; border-radius:10px; margin-bottom:20px;">
-            <h3 style="color:#1a237e;">💡 Control de luces</h3>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn-on" onclick="encenderLuz('${e.id}'); modal.remove();">🔆 ENCENDER</button>
-                <button class="btn-off" onclick="apagarLuz('${e.id}'); modal.remove();">🌙 APAGAR</button>
+        <div style="background:#f8f9fa; padding:20px; border-radius:10px; margin-bottom:20px;">
+            <h3 style="color:#1a237e; margin-bottom:15px;">📡 CONFIGURACIÓN WIFI</h3>
+            
+            <div style="margin-bottom:15px;">
+                <label style="display:block; margin-bottom:5px; color:#5c6bc0;">SSID (nombre de red):</label>
+                <input type="text" id="ssid-${e.id}" value="${e.wifi.ssid}" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:6px;">
             </div>
+            
+            <div style="margin-bottom:15px;">
+                <label style="display:block; margin-bottom:5px; color:#5c6bc0;">Contraseña:</label>
+                <input type="password" id="pass-${e.id}" placeholder="Ingrese contraseña" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:6px;">
+            </div>
+            
+            <button onclick="guardarWifi('${e.id}')" style="width:100%; padding:12px; background:#3498db; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
+                💾 GUARDAR CONFIGURACIÓN
+            </button>
         </div>
 
         <div style="text-align:center; margin-top:20px;">
@@ -523,26 +468,25 @@ function verDetalles(id) {
     document.body.appendChild(modal);
 }
 
-function encenderLuz(id) {
+function guardarWifi(id) {
+    const ssid = document.getElementById(`ssid-${id}`)?.value.trim();
+    const pass = document.getElementById(`pass-${id}`)?.value.trim();
     const e = datosEstaciones.find(e => e.id === id);
-    if (e) {
-        e.estadoLuces = true;
-        mostrarNotificacion(`💡 Luces encendidas en ${e.nombre}`, '#f39c12');
-        actualizarMarcadores();
-        actualizarEstadisticas();
+    
+    if (!ssid || !pass) {
+        mostrarNotificacion('❌ Completá SSID y contraseña', '#e74c3c');
+        return;
     }
+    
+    e.wifi.ssid = ssid;
+    e.wifi.señal = 85 + Math.floor(Math.random() * 10);
+    mostrarNotificacion(`✅ WiFi configurado en ${e.nombre}`, '#2ecc71');
+    actualizarEstadisticas();
+    actualizarMarcadores();
+    document.querySelector('.modal-backdrop')?.remove();
 }
 
-function apagarLuz(id) {
-    const e = datosEstaciones.find(e => e.id === id);
-    if (e) {
-        e.estadoLuces = false;
-        mostrarNotificacion(`🌙 Luces apagadas en ${e.nombre}`, '#95a5a6');
-        actualizarMarcadores();
-        actualizarEstadisticas();
-    }
-}
-
+// ========== NOTIFICACIONES ==========
 function mostrarNotificacion(msg, color) {
     const n = document.createElement('div');
     n.className = 'notificacion';
@@ -552,6 +496,7 @@ function mostrarNotificacion(msg, color) {
     setTimeout(() => n.remove(), 4000);
 }
 
+// ========== SIMULACIÓN ==========
 function actualizarDatosSimulados() {
     datosEstaciones.forEach(e => {
         if (Math.random() > 0.9) {
@@ -567,16 +512,16 @@ function actualizarDatosSimulados() {
     actualizarMarcadores();
 }
 
+// CSS adicional
 const style = document.createElement('style');
 style.innerHTML = `
-    .info-box { background:white; padding:15px; border-radius:10px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
-    .info-box span { display:block; font-size:0.9rem; color:#5c6bc0; }
-    .info-box strong { font-size:1.4rem; color:#1a237e; }
-    .btn-on { flex:1; background:#2ecc71; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
-    .btn-off { flex:1; background:#e74c3c; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
     .close-btn { background:#666; color:white; padding:10px 30px; border:none; border-radius:8px; cursor:pointer; }
     .map-btn.active { background:#2ecc71 !important; }
     .notificacion { position:fixed; top:20px; right:20px; color:white; padding:15px 25px; border-radius:10px; z-index:3000; font-weight:bold; animation:slideIn 0.5s; box-shadow:0 5px 15px rgba(0,0,0,0.3); }
     @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .duracion-btn, .velocidad-btn { padding:12px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; color:white; }
+    .duracion-btn { background:#1a237e; }
+    .velocidad-btn { background:#5c6bc0; }
+    .duracion-btn.seleccionado, .velocidad-btn.seleccionado { border:4px solid #f39c12; }
 `;
 document.head.appendChild(style);
