@@ -35,7 +35,7 @@ function iniciarSistema() {
     setInterval(actualizarDatosSimulados, 30000);
 }
 
-// ========== CARGA DE DATOS COMPLETOS (TODAS LAS ESTACIONES) ==========
+// ========== CARGA DE DATOS COMPLETOS (TODAS LAS 104 ESTACIONES) ==========
 function cargarDatosCompletos() {
     datosEstaciones = [
         // ==================== LÍNEA A (18 estaciones) ====================
@@ -273,7 +273,6 @@ function apagarTodasLasLuces() {
 
 // ========== 🎉 MODO FIESTA SIMPLIFICADO ==========
 function mostrarPanelFiestas() {
-    // Cerrar modal anterior si existe
     const modalAnterior = document.querySelector('.modal-backdrop');
     if (modalAnterior) modalAnterior.remove();
     
@@ -337,7 +336,6 @@ function mostrarPanelFiestas() {
     modal.appendChild(contenido);
     document.body.appendChild(modal);
 
-    // Estilos para botones del modal
     const style = document.createElement('style');
     style.innerHTML = `
         .duracion-btn, .velocidad-btn {
@@ -362,12 +360,10 @@ function mostrarPanelFiestas() {
     `;
     document.head.appendChild(style);
 
-    // Valores por defecto
     window.duracionFiesta = 60;
     window.velocidadFiesta = 1;
     
     setTimeout(() => {
-        // Seleccionar duración por defecto (1 min)
         const btnsDuracion = document.querySelectorAll('.duracion-btn');
         btnsDuracion.forEach(btn => {
             if (btn.textContent.includes('1 min')) {
@@ -375,7 +371,6 @@ function mostrarPanelFiestas() {
             }
         });
         
-        // Seleccionar velocidad por defecto (Normal)
         const btnsVelocidad = document.querySelectorAll('.velocidad-btn');
         btnsVelocidad.forEach(btn => {
             if (btn.textContent.includes('Normal')) {
@@ -403,7 +398,6 @@ function seleccionarVelocidad(velocidad, btn) {
 }
 
 function iniciarFiesta() {
-    // Leer valores personalizados
     const durPersonalizada = document.getElementById('duracionPersonalizada')?.value;
     if (durPersonalizada && durPersonalizada > 0) {
         window.duracionFiesta = parseInt(durPersonalizada);
@@ -417,44 +411,36 @@ function iniciarFiesta() {
     const duracion = window.duracionFiesta || 60;
     const velocidad = window.velocidadFiesta || 1;
 
-    // Guardar estados originales de luces
     window.estadosOriginales = datosEstaciones.map(e => e.estadoLuces);
 
-    // Detener fiesta anterior si existe
     if (intervaloFiesta) {
         clearInterval(intervaloFiesta);
     }
 
-    // Iniciar nueva fiesta (simple intermitencia)
     let encendido = false;
     intervaloFiesta = setInterval(() => {
         encendido = !encendido;
         
-        // Aplicar a todas las estaciones conectadas
         datosEstaciones.forEach(e => {
             if (e.wifi.señal > 0) {
                 e.estadoLuces = encendido;
             }
         });
         
-        // Actualizar estadísticas y mapa
         actualizarMarcadores();
         actualizarEstadisticas();
         
     }, 1000 / velocidad);
 
-    // Mostrar notificación
     const duracionTexto = duracion === 0 ? 'manual' : duracion + ' segundos';
     mostrarNotificacion(`🎉 Fiesta iniciada: ${velocidad}Hz, ${duracionTexto}`, '#9b59b6');
 
-    // Programar fin si duración es > 0
     if (duracion > 0) {
         setTimeout(() => {
             detenerFiesta();
         }, duracion * 1000);
     }
 
-    // Cerrar modal
     document.querySelector('.modal-backdrop')?.remove();
 }
 
@@ -464,10 +450,8 @@ function detenerFiesta() {
         intervaloFiesta = null;
     }
     
-    // Restaurar fondo normal
     document.body.style.background = 'linear-gradient(135deg, #1a237e 0%, #311b92 100%)';
     
-    // Restaurar estados originales
     if (window.estadosOriginales) {
         datosEstaciones.forEach((e, i) => {
             if (i < window.estadosOriginales.length) {
@@ -539,7 +523,6 @@ function verDetalles(id) {
     document.body.appendChild(modal);
 }
 
-// ========== CONTROL INDIVIDUAL ==========
 function encenderLuz(id) {
     const e = datosEstaciones.find(e => e.id === id);
     if (e) {
@@ -560,7 +543,6 @@ function apagarLuz(id) {
     }
 }
 
-// ========== NOTIFICACIONES ==========
 function mostrarNotificacion(msg, color) {
     const n = document.createElement('div');
     n.className = 'notificacion';
@@ -570,7 +552,6 @@ function mostrarNotificacion(msg, color) {
     setTimeout(() => n.remove(), 4000);
 }
 
-// ========== SIMULACIÓN ==========
 function actualizarDatosSimulados() {
     datosEstaciones.forEach(e => {
         if (Math.random() > 0.9) {
@@ -586,7 +567,6 @@ function actualizarDatosSimulados() {
     actualizarMarcadores();
 }
 
-// CSS adicional
 const style = document.createElement('style');
 style.innerHTML = `
     .info-box { background:white; padding:15px; border-radius:10px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
