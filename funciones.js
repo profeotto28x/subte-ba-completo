@@ -97,17 +97,18 @@ function actualizarMarcadores() {
     filtradas.forEach(e => {
         let color;
         if (e.wifi.señal === 0) {
-            color = '#95a5a6';
+            color = '#95a5a6'; // Gris para offline
         } else if (e.bateria > 70) {
-            color = '#2ecc71';
+            color = '#2ecc71'; // Verde para normal
         } else if (e.bateria > 40) {
-            color = '#f39c12';
+            color = '#f39c12'; // Naranja para alerta
         } else {
-            color = '#e74c3c';
+            color = '#e74c3c'; // Rojo para crítico
         }
 
+        // Ícono con borde blanco redondeado y sombra suave (versión mejorada)
         let icono = L.divIcon({
-            html: `<div style="background:${color}; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 0 10px rgba(0,0,0,0.3);"></div>`,
+            html: `<div style="background:${color}; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.2);"></div>`,
             iconSize: [20, 20]
         });
         
