@@ -1,813 +1,3 @@
-// funciones.js - SISTEMA DE CONTROL SUBTE BA - VERSIÓN ESTABLE
-
-// ========== VARIABLES GLOBALES ==========
-let datosEstaciones = [];
-let mapa = null;
-let marcadores = [];
-let modoFiestaActivo = null;
-let intervaloFiesta = null;
-
-// ========== SISTEMA DE LOGIN ==========
-function checkLogin() {
-    const passwordInput = document.getElementById('password');
-    
-    if (!passwordInput) {
-        console.log('⚠️ Campo de password no encontrado - Acceso directo');
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('dashboard-content').style.display = 'block';
-        inicializarSistema();
-        return;
-    }
-    
-    const password = passwordInput.value;
-    
-    if (password === 'SUBTE2024' || password === '') {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('dashboard-content').style.display = 'block';
-        inicializarSistema();
-    } else {
-        alert('❌ Contraseña incorrecta\n\nPara demo use: SUBTE2024\nO deje vacío para acceso rápido');
-        passwordInput.value = '';
-        passwordInput.focus();
-    }
-}
-
-function logout() {
-    if (intervaloFiesta) {
-        clearInterval(intervaloFiesta);
-    }
-    
-    document.getElementById('dashboard-content').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'flex';
-    
-    const passwordInput = document.getElementById('password');
-    if (passwordInput) {
-        passwordInput.value = '';
-    }
-}
-
-// ========== INICIALIZACIÓN DEL SISTEMA ==========
-function inicializarSistema() {
-    console.log('✅ Inicializando sistema...');
-    
-    cargarDatosEstaciones();
-    actualizarEstadisticasConexion();
-    inicializarMapaSiEsPosible();
-    verificarModoFiestaActivo();
-    
-    setInterval(actualizarDatosAutomaticamente, 10000);
-    
-    console.log('✅ Sistema inicializado correctamente');
-}
-
-function cargarDatosEstaciones() {
-    if (window.databaseSubte && window.databaseSubte.generarDatosEstadoInicial) {
-        datosEstaciones = window.databaseSubte.generarDatosEstadoInicial();
-        console.log(`✅ Cargadas ${datosEstaciones.length} estaciones`);
-    } else {
-        console.log('⚠️ databaseSubte no está disponible, usando datos de prueba');
-        datosEstaciones = [
-            {
-                id: 'A-01',
-                nombre: 'Plaza de Mayo',
-                linea: 'A',
-                lat: -34.6083,
-                lon: -58.3712,
-                conexion: { estado: 'conectado', wifi: { señal: 85, ssid: 'SUBTE_A_01', ip: '192.168.1.100' } },
-                dispositivo: { bateria: 90, estado: 'normal', temperatura: 26.5 }
-            },
-            {
-                id: 'B-06',
-                nombre: 'Plaza Once',
-                linea: 'B',
-                lat: -34.6060,
-                lon: -58.4030,
-                conexion: { estado: 'conectado', wifi: { señal: 78, ssid: 'SUBTE_B_06', ip: '192.168.1.106' } },
-                dispositivo: { bateria: 65, estado: 'alerta', temperatura: 28.2 }
-            }
-        ];
-    }
-}
-
-// ========== SISTEMA DE CONEXIÓN WIFI ==========
-function actualizarEstadisticasConexion() {
-    if (!datosEstaciones.length) {
-        console.log('⚠️ No hay datos de estaciones');
-        return;
-    }
-    
-    const total = datosEstaciones.length;
-    const conectadas = datosEstaciones.filter(e => e.conexion.estado === 'conectado').length;
-    const porcentaje = Math.round((conectadas / total) * 100);
-    
-    const wifiConnected = document.getElementById('wifi-connected');
-    const wifiDisconnected = document.getElementById('wifi-disconnected');
-    const wifiPercentage = document.getElementById('wifi-percentage');
-    
-    if (wifiConnected) wifiConnected.textContent = conectadas;
-    if (wifiDisconnected) wifiDisconnected.textContent = total - conectadas;
-    if (wifiPercentage) wifiPercentage.textContent = `${porcentaje}%`;
-    
-    const estadoElement = document.getElementById('estado-general');
-    if (estadoElement) {
-        if (conectadas === total) {
-            estadoElement.innerHTML = `<span style="background: #2ecc71; color: white; padding: 8px 15px; border-radius: 20px;">✅ ${conectadas} de ${total} estaciones conectadas</span>`;
-        } else if (conectadas > total * 0.7) {
-            estadoElement.innerHTML = `<span style="background: #f39c12; color: white; padding: 8px 15px; border-radius: 20px;">⚠️ ${conectadas} de ${total} estaciones conectadas</span>`;
-        } else {
-            estadoElement.innerHTML = `<span style="background: #e74c3c; color: white; padding: 8px 15px; border-radius: 20px;">❌ ${conectadas} de ${total} estaciones conectadas</span>`;
-        }
-    }
-}
-
-function conectarTodas() {
-    console.log('🔌 Conectando todas las estaciones...');
-    
-    datosEstaciones.forEach(estacion => {
-        estacion.conexion.estado = 'conectado';
-        estacion.conexion.wifi.señal = 80 + Math.random() * 20;
-        estacion.dispositivo.bateria = 80 + Math.random() * 20;
-        estacion.dispositivo.estado = 'normal';
-    });
-    
-    actualizarEstadisticasConexion();
-    if (mapa) actualizarMarcadores();
-    mostrarNotificacion('✅ Todas las estaciones conectadas', '#2ecc71');
-}
-
-function filtrarMapa(tipo) {
-    const botones = document.querySelectorAll('.map-btn');
-    if (botones.length > 0 && event && event.target) {
-        botones.forEach(btn => {
-            btn.classList.remove('active');
-        });
-        event.target.classList.add('active');
-    }
-    
-    mostrarNotificacion(`🗺️ Mostrando: ${tipo === 'todas' ? 'Todas las estaciones' : 'Línea ' + tipo}`, '#3498db');
-}
-
-// ========== MAPA INTERACTIVO ==========
-function inicializarMapaSiEsPosible() {
-    console.log('🗺️ Verificando condiciones para mapa...');
-    
-    const mapContainer = document.getElementById('map');
-    if (!mapContainer) {
-        console.log('❌ No se encontró el contenedor del mapa');
-        return;
-    }
-    
-    if (typeof L === 'undefined') {
-        console.log('⚠️ Leaflet no está cargado, cargando...');
-        cargarLeaflet();
-        return;
-    }
-    
-    initMap();
-}
-
-function cargarLeaflet() {
-    if (document.querySelector('script[src*="leaflet"]')) {
-        console.log('⚠️ Leaflet ya se está cargando...');
-        return;
-    }
-    
-    console.log('📦 Cargando Leaflet CSS...');
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-    
-    console.log('📦 Cargando Leaflet JS...');
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = function() {
-        console.log('✅ Leaflet cargado correctamente');
-        setTimeout(initMap, 500);
-    };
-    script.onerror = function() {
-        console.log('❌ Error al cargar Leaflet');
-        mostrarNotificacion('❌ Error al cargar el mapa', '#e74c3c');
-    };
-    
-    document.head.appendChild(script);
-}
-
-function initMap() {
-    console.log('🗺️ Inicializando mapa...');
-    
-    const mapContainer = document.getElementById('map');
-    if (!mapContainer) {
-        console.log('❌ No se encontró el contenedor del mapa');
-        return;
-    }
-    
-    if (typeof L === 'undefined') {
-        console.log('❌ Leaflet no está disponible');
-        return;
-    }
-    
-    try {
-        mapa = L.map('map').setView([-34.6037, -58.3816], 13);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(mapa);
-        
-        actualizarMarcadores();
-        
-        console.log('✅ Mapa inicializado correctamente');
-    } catch (error) {
-        console.log('❌ Error al inicializar mapa:', error);
-        mostrarNotificacion('❌ Error al mostrar el mapa', '#e74c3c');
-    }
-}
-
-function actualizarMarcadores() {
-    if (!mapa) {
-        console.log('⚠️ Mapa no está inicializado');
-        return;
-    }
-    
-    if (marcadores.length > 0) {
-        marcadores.forEach(marker => mapa.removeLayer(marker));
-        marcadores = [];
-    }
-    
-    if (!datosEstaciones || datosEstaciones.length === 0) {
-        console.log('⚠️ No hay datos de estaciones para mostrar');
-        return;
-    }
-    
-    datosEstaciones.forEach(estacion => {
-        if (!estacion.lat || !estacion.lon) {
-            console.log(`⚠️ Estación ${estacion.nombre} no tiene coordenadas`);
-            return;
-        }
-        
-        let color, estadoTexto;
-        if (estacion.dispositivo && estacion.dispositivo.estado) {
-            switch(estacion.dispositivo.estado) {
-                case 'normal':
-                    color = '#2ecc71';
-                    estadoTexto = '✅ Normal';
-                    break;
-                case 'alerta':
-                    color = '#f39c12';
-                    estadoTexto = '⚠️ Alerta';
-                    break;
-                case 'critico':
-                    color = '#e74c3c';
-                    estadoTexto = '❌ Crítico';
-                    break;
-                default:
-                    color = '#95a5a6';
-                    estadoTexto = '🔌 Offline';
-            }
-        } else {
-            color = '#95a5a6';
-            estadoTexto = '🔌 Desconocido';
-        }
-        
-        const icono = L.divIcon({
-            className: 'custom-marker',
-            html: `<div style="background: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
-            iconSize: [20, 20]
-        });
-        
-        const marker = L.marker([estacion.lat, estacion.lon], { icon: icono })
-            .addTo(mapa)
-            .bindPopup(`
-                <strong>${estacion.nombre}</strong><br>
-                <small>Línea ${estacion.linea}</small><br>
-                <b>${estadoTexto}</b><br>
-                📶 WiFi: ${estacion.conexion?.wifi?.señal || 0}%<br>
-                🔋 Batería: ${estacion.dispositivo?.bateria || 0}%<br>
-                <button onclick="mostrarDetallesEstacion('${estacion.id}')" style="margin-top: 8px; padding: 6px 12px; background: #1a237e; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Ver detalles
-                </button>
-            `);
-        
-        marcadores.push(marker);
-    });
-    
-    console.log(`✅ ${marcadores.length} marcadores agregados al mapa`);
-}
-
-function mostrarDetallesEstacion(estacionId) {
-    const estacion = datosEstaciones.find(e => e.id === estacionId);
-    if (!estacion) {
-        mostrarNotificacion('❌ No se encontró la estación', '#e74c3c');
-        return;
-    }
-    
-    const detallesHTML = `
-        <div style="min-width: 300px; padding: 20px;">
-            <h3 style="color: #1a237e; margin-bottom: 15px;">🚇 ${estacion.nombre}</h3>
-            <p><strong>📍 Línea:</strong> ${estacion.linea}</p>
-            <p><strong>🔌 Estado:</strong> <span style="color: ${estacion.conexion.estado === 'conectado' ? '#2ecc71' : '#e74c3c'}">${estacion.conexion.estado.toUpperCase()}</span></p>
-            <p><strong>📶 WiFi:</strong> ${estacion.conexion.wifi.señal}%</p>
-            <p><strong>🔋 Batería:</strong> ${estacion.dispositivo.bateria}%</p>
-            <p><strong>🌡️ Temp:</strong> ${estacion.dispositivo.temperatura.toFixed(1)}°C</p>
-            <p><strong>📡 Red:</strong> ${estacion.conexion.wifi.ssid}</p>
-            <p><strong>🏠 IP:</strong> ${estacion.conexion.wifi.ip || 'No asignada'}</p>
-            
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button onclick="mostrarConfigWifiEstacion('${estacionId}')" style="flex: 1; padding: 10px; background: #1a237e; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                    📡 Configurar WiFi
-                </button>
-                <button onclick="controlarLucesEstacion('${estacionId}')" style="flex: 1; padding: 10px; background: #f39c12; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                    💡 Controlar Luces
-                </button>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px;">
-                <button onclick="this.parentElement.parentElement.parentElement.remove(); document.querySelector('div[style*=\"background: rgba(0,0,0,0.5)\"]').remove()" style="padding: 8px 20px; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                    ❌ Cerrar
-                </button>
-            </div>
-        </div>
-    `;
-    
-    const alertDiv = document.createElement('div');
-    alertDiv.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        padding: 0;
-        border-radius: 15px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        z-index: 1000;
-        max-width: 90%;
-        max-height: 90vh;
-        overflow-y: auto;
-    `;
-    
-    alertDiv.innerHTML = detallesHTML;
-    
-    const backdrop = document.createElement('div');
-    backdrop.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        z-index: 999;
-    `;
-    backdrop.onclick = () => {
-        alertDiv.remove();
-        backdrop.remove();
-    };
-    
-    document.body.appendChild(backdrop);
-    document.body.appendChild(alertDiv);
-}
-
-// ========== SISTEMA DE FIESTAS ==========
-function mostrarPanelFiestas() {
-    console.log('🎉 Mostrando panel de fiestas...');
-    
-    const modalHTML = `
-        <div class="modal-backdrop">
-            <div class="modal-content" style="max-width: 500px;">
-                <h2 style="color: #1a237e; text-align: center;">🎉 MODO FIESTA</h2>
-                <p style="text-align: center; color: #666; margin-bottom: 25px;">Seleccione un efecto de luces</p>
-                
-                <div style="margin: 20px 0;">
-                    <button onclick="activarFiesta('navidad')" style="width: 100%; padding: 15px; background: #FF0000; color: white; border: none; border-radius: 8px; margin-bottom: 10px; cursor: pointer; font-weight: bold;">
-                        🎄 ACTIVAR NAVIDAD
-                    </button>
-                    <p style="font-size: 0.9rem; color: #666; text-align: center;">Rojo y verde alternante</p>
-                </div>
-                
-                <div style="margin: 20px 0; padding: 20px; background: #f0f8ff; border-radius: 10px;">
-                    <h3 style="color: #1a237e; margin-bottom: 10px;">🇦🇷 DÍA DE LA INDEPENDENCIA</h3>
-                    <p style="margin-bottom: 15px;">Celeste y blanco patriótico</p>
-                    <button onclick="activarFiesta('independencia')" style="width: 100%; padding: 15px; background: #75AADB; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-                        🇦🇷 ACTIVAR INDEPENDENCIA
-                    </button>
-                </div>
-                
-                <div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 10px;">
-                    <h3 style="color: #1a237e; margin-bottom: 10px;">⚙️ CONFIGURACIÓN</h3>
-                    
-                    <div style="margin: 15px 0;">
-                        <label style="display: block; margin-bottom: 5px; color: #5c6bc0;">Frecuencia: <span id="freqValue">1</span> Hz</label>
-                        <input type="range" id="fiestaFreq" min="0.5" max="5" step="0.5" value="1" style="width: 100%;" 
-                               oninput="document.getElementById('freqValue').textContent = this.value">
-                    </div>
-                    
-                    <div style="margin: 15px 0;">
-                        <label style="display: block; margin-bottom: 5px; color: #5c6bc0;">Duración:</label>
-                        <select id="fiestaDuration" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
-                            <option value="1">1 minuto (prueba)</option>
-                            <option value="30">30 minutos</option>
-                            <option value="60" selected>1 hora</option>
-                            <option value="120">2 horas</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div style="display: flex; gap: 10px; margin-top: 25px;">
-                    <button onclick="probarEfectoFiesta()" style="flex: 1; padding: 12px; background: #f39c12; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        🔦 Probar efecto
-                    </button>
-                    <button onclick="cerrarModalFiesta()" style="flex: 1; padding: 12px; background: #666; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        ❌ Cancelar
-                    </button>
-                </div>
-                
-                ${modoFiestaActivo ? `
-                <div style="margin-top: 25px; padding: 15px; background: #e8f5e9; border-radius: 10px; text-align: center;">
-                    <strong>🎆 MODO FIESTA ACTIVO</strong><br>
-                    ${modoFiestaActivo.modo ? modoFiestaActivo.modo.toUpperCase() : 'DESCONOCIDO'} - ${modoFiestaActivo.frecuencia || 1}Hz
-                    <button onclick="desactivarFiesta()" style="margin-top: 10px; padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        ⏹️ DESACTIVAR
-                    </button>
-                </div>
-                ` : ''}
-            </div>
-        </div>
-    `;
-    
-    const modal = document.createElement('div');
-    modal.id = 'modal-fiesta';
-    modal.innerHTML = modalHTML;
-    document.body.appendChild(modal);
-}
-
-function cerrarModalFiesta() {
-    const modal = document.getElementById('modal-fiesta');
-    if (modal) modal.remove();
-}
-
-function activarFiesta(modo) {
-    console.log(`🎉 Activando modo fiesta: ${modo}`);
-    
-    const frecuenciaInput = document.getElementById('fiestaFreq');
-    const duracionInput = document.getElementById('fiestaDuration');
-    
-    if (!frecuenciaInput || !duracionInput) {
-        mostrarNotificacion('❌ No se pudo leer la configuración', '#e74c3c');
-        return;
-    }
-    
-    const frecuencia = parseFloat(frecuenciaInput.value);
-    const duracion = parseInt(duracionInput.value);
-    
-    datosEstaciones.forEach(estacion => {
-        if (!estacion.iluminacion) {
-            estacion.iluminacion = {};
-        }
-        estacion.iluminacion.modo = 'fiesta';
-        estacion.iluminacion.fiesta = {
-            modo: modo,
-            frecuencia: frecuencia,
-            activo: true
-        };
-    });
-    
-    modoFiestaActivo = {
-        modo: modo,
-        frecuencia: frecuencia,
-        activo: true,
-        inicio: new Date().toISOString()
-    };
-    
-    iniciarAnimacionFiesta(modo, frecuencia);
-    mostrarNotificacion(`🎉 Modo ${modo.toUpperCase()} activado!`, '#2ecc71');
-    cerrarModalFiesta();
-}
-
-function desactivarFiesta() {
-    console.log('⏹️ Desactivando modo fiesta');
-    
-    datosEstaciones.forEach(estacion => {
-        if (estacion.iluminacion) {
-            estacion.iluminacion.modo = 'normal';
-            if (estacion.iluminacion.fiesta) {
-                estacion.iluminacion.fiesta.activo = false;
-            }
-        }
-    });
-    
-    modoFiestaActivo = null;
-    
-    if (intervaloFiesta) {
-        clearInterval(intervaloFiesta);
-        intervaloFiesta = null;
-    }
-    
-    document.body.style.background = 'linear-gradient(135deg, #1a237e 0%, #311b92 100%)';
-    mostrarNotificacion('⏹️ Modo fiesta desactivado', '#95a5a6');
-    cerrarModalFiesta();
-}
-
-function probarEfectoFiesta() {
-    console.log('🔦 Probando efecto de fiesta');
-    
-    const frecuenciaInput = document.getElementById('fiestaFreq');
-    if (!frecuenciaInput) {
-        mostrarNotificacion('❌ No se pudo leer la frecuencia', '#e74c3c');
-        return;
-    }
-    
-    const frecuencia = parseFloat(frecuenciaInput.value);
-    const colores = ['#FF0000', '#00FF00'];
-    
-    let colorIndex = 0;
-    const demoInterval = setInterval(() => {
-        document.body.style.background = colores[colorIndex];
-        document.body.style.transition = 'background 0.3s';
-        colorIndex = (colorIndex + 1) % colores.length;
-    }, 1000 / frecuencia);
-    
-    setTimeout(() => {
-        clearInterval(demoInterval);
-        document.body.style.background = 'linear-gradient(135deg, #1a237e 0%, #311b92 100%)';
-        mostrarNotificacion('✅ Efecto probado correctamente', '#3498db');
-    }, 3000);
-}
-
-function iniciarAnimacionFiesta(modo, frecuencia) {
-    console.log(`🎬 Iniciando animación: ${modo} a ${frecuencia}Hz`);
-    
-    if (intervaloFiesta) {
-        clearInterval(intervaloFiesta);
-    }
-    
-    const colores = modo === 'independencia' ? ['#75AADB', '#FFFFFF'] : ['#FF0000', '#00FF00'];
-    let colorIndex = 0;
-    
-    intervaloFiesta = setInterval(() => {
-        const dashboard = document.getElementById('dashboard-content');
-        if (dashboard) {
-            dashboard.style.background = colores[colorIndex];
-            dashboard.style.transition = 'background 0.5s';
-        }
-        
-        colorIndex = (colorIndex + 1) % colores.length;
-    }, 1000 / frecuencia);
-}
-
-function verificarModoFiestaActivo() {
-    console.log('🔍 Verificando modo fiesta activo...');
-    modoFiestaActivo = null;
-}
-
-// ========== CONFIGURACIÓN WIFI ==========
-function mostrarConfigWifiEstacion(estacionId) {
-    console.log(`📡 Mostrando configuración WiFi para: ${estacionId}`);
-    
-    const estacion = datosEstaciones.find(e => e.id === estacionId);
-    if (!estacion) {
-        mostrarNotificacion('❌ No se encontró la estación', '#e74c3c');
-        return;
-    }
-    
-    const modalHTML = `
-        <div class="modal-backdrop">
-            <div class="modal-content" style="max-width: 500px;">
-                <h2 style="color: #1a237e; text-align: center;">📡 CONFIGURAR WIFI</h2>
-                <p style="text-align: center; color: #666; margin-bottom: 20px;">${estacion.nombre} - Línea ${estacion.linea}</p>
-                
-                <div style="padding: 20px; background: #f8f9fa; border-radius: 10px; margin-bottom: 20px;">
-                    <h3 style="color: #5c6bc0; margin-bottom: 15px;">⚙️ CONFIGURACIÓN ACTUAL</h3>
-                    <p><strong>SSID:</strong> ${estacion.conexion.wifi.ssid}</p>
-                    <p><strong>Estado:</strong> ${estacion.conexion.estado}</p>
-                    <p><strong>Señal:</strong> ${estacion.conexion.wifi.señal}%</p>
-                    <p><strong>IP:</strong> ${estacion.conexion.wifi.ip || 'No asignada'}</p>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 5px; color: #5c6bc0;">Nuevo SSID:</label>
-                    <input type="text" id="nuevo-ssid" placeholder="Nombre de la red WiFi" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px;" value="${estacion.conexion.wifi.ssid}">
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 5px; color: #5c6bc0;">Contraseña:</label>
-                    <input type="password" id="nuevo-password" placeholder="Contraseña WiFi" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 30px;">
-                    <button onclick="probarConexionWifiSimple('${estacionId}')" style="padding: 12px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        🔍 Probar
-                    </button>
-                    
-                    <button onclick="guardarConfigWifiSimple('${estacionId}')" style="padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        💾 Guardar
-                    </button>
-                </div>
-                
-                <div style="text-align: center; margin-top: 25px;">
-                    <button onclick="cerrarModalWifi()" style="padding: 10px 30px; background: #666; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        ❌ Cerrar
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    const modal = document.createElement('div');
-    modal.id = 'modal-wifi';
-    modal.innerHTML = modalHTML;
-    document.body.appendChild(modal);
-}
-
-function cerrarModalWifi() {
-    const modal = document.getElementById('modal-wifi');
-    if (modal) modal.remove();
-}
-
-function probarConexionWifiSimple(estacionId) {
-    const ssidInput = document.getElementById('nuevo-ssid');
-    if (!ssidInput || !ssidInput.value) {
-        mostrarNotificacion('❌ Ingrese un SSID para probar', '#e74c3c');
-        return;
-    }
-    
-    const ssid = ssidInput.value;
-    mostrarNotificacion(`🔍 Probando conexión a ${ssid}...`, '#3498db');
-    
-    setTimeout(() => {
-        const exito = Math.random() > 0.3;
-        if (exito) {
-            mostrarNotificacion(`✅ Conexión exitosa a ${ssid}`, '#2ecc71');
-        } else {
-            mostrarNotificacion(`❌ No se pudo conectar a ${ssid}`, '#e74c3c');
-        }
-    }, 2000);
-}
-
-function guardarConfigWifiSimple(estacionId) {
-    const ssidInput = document.getElementById('nuevo-ssid');
-    const passwordInput = document.getElementById('nuevo-password');
-    
-    if (!ssidInput || !ssidInput.value || !passwordInput || !passwordInput.value) {
-        mostrarNotificacion('❌ Complete SSID y contraseña', '#e74c3c');
-        return;
-    }
-    
-    const estacion = datosEstaciones.find(e => e.id === estacionId);
-    if (estacion) {
-        estacion.conexion.wifi.ssid = ssidInput.value;
-        mostrarNotificacion(`✅ Configuración WiFi guardada para ${estacion.nombre}`, '#2ecc71');
-        cerrarModalWifi();
-    }
-}
-
-function controlarLucesEstacion(estacionId) {
-    console.log(`💡 Controlando luces de: ${estacionId}`);
-    
-    const estacion = datosEstaciones.find(e => e.id === estacionId);
-    if (!estacion) {
-        mostrarNotificacion('❌ No se encontró la estación', '#e74c3c');
-        return;
-    }
-    
-    if (!estacion.iluminacion) {
-        estacion.iluminacion = {};
-    }
-    
-    const nuevaEstado = !estacion.iluminacion.encendida;
-    estacion.iluminacion.encendida = nuevaEstado;
-    estacion.iluminacion.modo = 'manual';
-    
-    mostrarNotificacion(
-        nuevaEstado ? `💡 Luces encendidas en ${estacion.nombre}` : `🌙 Luces apagadas en ${estacion.nombre}`,
-        nuevaEstado ? '#f39c12' : '#95a5a6'
-    );
-}
-
-// ========== FUNCIONES AUXILIARES ==========
-function mostrarNotificacion(mensaje, color) {
-    console.log(`📢 Notificación: ${mensaje}`);
-    
-    const notifsAnteriores = document.querySelectorAll('.notification-custom');
-    notifsAnteriores.forEach(notif => notif.remove());
-    
-    const notif = document.createElement('div');
-    notif.className = 'notification-custom';
-    notif.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${color};
-        color: white;
-        padding: 15px 25px;
-        border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        z-index: 1001;
-        font-weight: bold;
-        animation: slideIn 0.5s;
-    `;
-    
-    notif.textContent = mensaje;
-    
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = '×';
-    closeBtn.style.cssText = `
-        margin-left: 15px;
-        background: transparent;
-        border: none;
-        color: white;
-        font-size: 1.2rem;
-        cursor: pointer;
-        padding: 0 5px;
-    `;
-    closeBtn.onclick = () => notif.remove();
-    
-    notif.appendChild(closeBtn);
-    document.body.appendChild(notif);
-    
-    setTimeout(() => {
-        if (notif.parentElement) {
-            notif.remove();
-        }
-    }, 5000);
-}
-
-function actualizarDatosAutomaticamente() {
-    if (!datosEstaciones || datosEstaciones.length === 0) return;
-    
-    datosEstaciones.forEach(estacion => {
-        if (Math.random() < 0.1) {
-            if (estacion.conexion.estado === 'conectado') {
-                estacion.conexion.estado = 'desconectado';
-                if (estacion.conexion.wifi) {
-                    estacion.conexion.wifi.señal = 0;
-                }
-            } else {
-                estacion.conexion.estado = 'conectado';
-                if (estacion.conexion.wifi) {
-                    estacion.conexion.wifi.señal = 60 + Math.random() * 40;
-                }
-            }
-        }
-        
-        if (estacion.conexion.estado === 'conectado' && estacion.dispositivo) {
-            estacion.dispositivo.bateria += (Math.random() * 4 - 2);
-            estacion.dispositivo.bateria = Math.max(0, Math.min(100, estacion.dispositivo.bateria));
-            
-            if (estacion.dispositivo.bateria > 70) {
-                estacion.dispositivo.estado = 'normal';
-            } else if (estacion.dispositivo.bateria > 40) {
-                estacion.dispositivo.estado = 'alerta';
-            } else {
-                estacion.dispositivo.estado = 'critico';
-            }
-        }
-    });
-    
-    actualizarEstadisticasConexion();
-    if (mapa) actualizarMarcadores();
-}
-
-// ========== INICIALIZACIÓN AUTOMÁTICA ==========
-console.log('✅ Sistema de Control Subtes BA - funciones.js cargado');
-
-// Agregar evento para login con Enter
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('📋 DOM cargado, sistema listo');
-    
-    const passwordInput = document.getElementById('password');
-    if (passwordInput) {
-        passwordInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                checkLogin();
-            }
-        });
-    }
-    
-    // Verificar si ya estamos logueados
-    setTimeout(function() {
-        const dashboard = document.getElementById('dashboard-content');
-        if (dashboard && dashboard.style.display !== 'none') {
-            console.log('🔍 Dashboard visible, verificando sistema...');
-        }
-    }, 500);
-});
-
-// Mensaje de bienvenida
-console.log('🎉 Sistema Subte BA - Clave: SUBTE2024 o vacío');
-console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -815,7 +5,7 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control Subtes Buenos Aires</title>
     <style>
-        /* ESTILOS GENERALES */
+        /* ========== ESTILOS GENERALES ========== */
         * {
             margin: 0;
             padding: 0;
@@ -827,90 +17,64 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             background: linear-gradient(135deg, #1a237e 0%, #311b92 100%);
             min-height: 100vh;
             color: #333;
-       /* ========== ESTILOS PARA CONFIGURACIÓN WIFI ========== */
+        }
 
-.wifi-config-btn {
-    padding: 8px 15px;
-    background: #1a237e;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    margin-top: 5px;
-    width: 100%;
-}
+        /* ========== ESTILOS WIFI ========== */
+        .wifi-config-btn {
+            padding: 8px 15px;
+            background: #1a237e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            width: 100%;
+        }
+        .wifi-config-btn:hover { background: #311b92; }
+        .qr-code {
+            width: 200px; height: 200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        .network-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            transition: transform 0.2s;
+        }
+        .network-item:hover { transform: translateX(5px); }
+        .network-signal {
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        .signal-excelente { background: #2ecc71; color: white; }
+        .signal-buena { background: #f39c12; color: white; }
+        .signal-debil { background: #e74c3c; color: white; }
+        .config-section {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .config-section h4 { color: #1a237e; margin-bottom: 10px; }
+        .modal-content { animation: modalAppear 0.3s ease-out; }
+        @keyframes modalAppear {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-.wifi-config-btn:hover {
-    background: #311b92;
-}
-
-.qr-code {
-    width: 200px;
-    height: 200px;
-    margin: 0 auto;
-    background: white;
-    border-radius: 10px;
-    padding: 10px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-}
-
-.network-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    margin-bottom: 8px;
-    background: white;
-    border-radius: 8px;
-    border-left: 4px solid #3498db;
-    transition: transform 0.2s;
-}
-
-.network-item:hover {
-    transform: translateX(5px);
-}
-
-.network-signal {
-    font-weight: bold;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-}
-
-.signal-excelente { background: #2ecc71; color: white; }
-.signal-buena { background: #f39c12; color: white; }
-.signal-debil { background: #e74c3c; color: white; }
-
-.config-section {
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    margin-bottom: 15px;
-}
-
-.config-section h4 {
-    color: #1a237e;
-    margin-bottom: 10px;
-}
-
-/* Mejorar el modal existente */
-.modal-content {
-    animation: modalAppear 0.3s ease-out;
-}
-
-@keyframes modalAppear {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-} }
-        
-        /* PANTALLA LOGIN */
+        /* ========== PANTALLA LOGIN ========== */
         #login-screen {
             display: flex;
             justify-content: center;
@@ -918,7 +82,6 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             min-height: 100vh;
             padding: 20px;
         }
-        
         .login-card {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
@@ -928,30 +91,25 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             text-align: center;
         }
-        
         .login-title {
             color: #1a237e;
             font-size: 1.8rem;
             margin-bottom: 10px;
         }
-        
         .login-subtitle {
             color: #5c6bc0;
             margin-bottom: 30px;
         }
-        
         .input-group {
             margin-bottom: 20px;
             text-align: left;
         }
-        
         .input-group label {
             display: block;
             margin-bottom: 8px;
             color: #1a237e;
             font-weight: 500;
         }
-        
         .input-group input {
             width: 100%;
             padding: 15px;
@@ -959,7 +117,6 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             border-radius: 10px;
             font-size: 16px;
         }
-        
         .login-btn {
             width: 100%;
             padding: 16px;
@@ -972,11 +129,7 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             cursor: pointer;
             margin-top: 10px;
         }
-        
-        .login-btn:hover {
-            transform: translateY(-2px);
-        }
-        
+        .login-btn:hover { transform: translateY(-2px); }
         .demo-info {
             margin-top: 20px;
             padding: 15px;
@@ -985,18 +138,14 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             font-size: 0.9rem;
             color: #5c6bc0;
         }
-        
-        /* DASHBOARD */
+
+        /* ========== DASHBOARD ========== */
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
-        
-        #dashboard-content {
-            display: none;
-        }
-        
+        #dashboard-content { display: none; }
         .dashboard-header {
             background: white;
             border-radius: 20px;
@@ -1007,7 +156,6 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             justify-content: space-between;
             align-items: center;
         }
-        
         .header-left h1 {
             color: #1a237e;
             font-size: 1.8rem;
@@ -1015,12 +163,10 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             align-items: center;
             gap: 10px;
         }
-        
         .header-left p {
             color: #5c6bc0;
             margin-top: 5px;
         }
-        
         #estado-general {
             margin-top: 10px;
             padding: 8px 15px;
@@ -1029,21 +175,6 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             font-weight: bold;
             text-align: center;
         }
-        
-        .status-online {
-            background: #2ecc71;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-        }
-        
-        .status-warning {
-            background: #f39c12;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-        }
-        
         .logout-btn {
             padding: 10px 20px;
             background: #e74c3c;
@@ -1053,8 +184,8 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             cursor: pointer;
             font-weight: bold;
         }
-        
-        /* ESTADÍSTICAS WIFI */
+
+        /* ========== ESTADÍSTICAS ========== */
         .wifi-panel {
             background: white;
             border-radius: 15px;
@@ -1062,54 +193,54 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             margin: 20px 0;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
-        
         .wifi-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin: 20px 0;
         }
-        
         .wifi-stat {
             text-align: center;
             padding: 20px;
             background: #f8f9fa;
             border-radius: 10px;
         }
-        
         .wifi-stat h3 {
             color: #5c6bc0;
             margin-bottom: 10px;
             font-size: 0.9rem;
         }
-        
         .wifi-number {
             font-size: 2.5rem;
             font-weight: bold;
             color: #1a237e;
         }
-        
         .wifi-controls {
             display: flex;
             gap: 15px;
             margin: 20px 0;
             flex-wrap: wrap;
+            justify-content: center;
         }
-        
         .wifi-btn {
-            padding: 10px 20px;
+            padding: 12px 25px;
             background: #1a237e;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
         }
-        
-        .wifi-btn:hover {
-            background: #311b92;
-        }
-        
-        /* BOTÓN FIESTA */
+        .wifi-btn:hover { background: #311b92; transform: scale(1.05); }
+        .btn-encender { background: #f39c12; }
+        .btn-encender:hover { background: #e67e22; }
+        .btn-apagar { background: #95a5a6; }
+        .btn-apagar:hover { background: #7f8c8d; }
+        .btn-problemas { background: #e74c3c; }
+        .btn-problemas:hover { background: #c0392b; }
+
+        /* ========== BOTÓN FIESTA ========== */
         .fiesta-btn {
             background: linear-gradient(135deg, #FF0000, #00FF00, #0000FF);
             color: white;
@@ -1124,14 +255,13 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             animation: pulse 2s infinite;
             width: 100%;
         }
-        
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
-        
-        /* MAPA */
+
+        /* ========== MAPA ========== */
         .map-container {
             background: white;
             border-radius: 15px;
@@ -1139,22 +269,20 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             margin: 20px 0;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
-        
         #map {
-            height: 400px;
+            height: 450px;
             width: 100%;
             border-radius: 10px;
             border: 2px solid #e8eaf6;
             margin-top: 20px;
         }
-        
         .map-controls {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
             flex-wrap: wrap;
+            justify-content: center;
         }
-        
         .map-btn {
             padding: 8px 16px;
             background: #1a237e;
@@ -1162,45 +290,44 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             border: none;
             border-radius: 6px;
             cursor: pointer;
+            transition: all 0.3s;
         }
-        
-        .map-btn.active {
-            background: #2ecc71;
+        .map-btn.active { background: #2ecc71; }
+
+        /* ========== LEYENDA ========== */
+        .leyenda {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
         }
-        
-        /* NOTIFICACIONES */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 25px;
-            border-radius: 10px;
-            color: white;
-            font-weight: bold;
-            z-index: 1000;
-            animation: slideIn 0.5s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        .leyenda-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        .leyenda-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        
-        /* MODAL FIESTA */
+
+        /* ========== MODAL ========== */
         .modal-backdrop {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.8);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
+            z-index: 2000;
         }
-        
         .modal-content {
             background: white;
             padding: 30px;
@@ -1209,27 +336,59 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
+            animation: modalAppear 0.3s;
         }
-        
-        /* RESPONSIVE */
+
+        /* ========== INFO BOX ========== */
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .info-box span {
+            display: block;
+            font-size: 0.9rem;
+            color: #5c6bc0;
+        }
+        .info-box strong {
+            font-size: 1.4rem;
+            color: #1a237e;
+        }
+
+        /* ========== NOTIFICACIONES ========== */
+        .notificacion {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            z-index: 3000;
+            animation: slideIn 0.5s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
             .dashboard-header {
                 flex-direction: column;
                 gap: 15px;
                 text-align: center;
             }
-            
             .wifi-controls, .map-controls {
                 flex-direction: column;
             }
-            
             .wifi-btn, .map-btn, .fiesta-btn {
                 width: 100%;
             }
-            
-            .container {
-                padding: 10px;
-            }
+            .container { padding: 10px; }
+            .leyenda { flex-direction: column; align-items: center; }
         }
     </style>
     <!-- Leaflet CSS para el mapa -->
@@ -1275,34 +434,34 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
             </button>
         </div>
         
-        <!-- PANEL DE CONEXIÓN WIFI -->
+        <!-- PANEL DE CONTROL -->
         <div class="wifi-panel">
-            <h2>📡 CONEXIÓN WIFI - ESTACIONES</h2>
+            <h2>📡 CONTROL DE ESTACIONES</h2>
             
             <div class="wifi-stats">
                 <div class="wifi-stat">
-                    <h3>ESTACIONES CONECTADAS</h3>
+                    <h3>CONECTADAS</h3>
                     <div class="wifi-number" id="wifi-connected">0</div>
                     <span id="wifi-percentage">0%</span>
                 </div>
                 <div class="wifi-stat">
-                    <h3>ESTACIONES DESCONECTADAS</h3>
+                    <h3>DESCONECTADAS</h3>
                     <div class="wifi-number" id="wifi-disconnected">0</div>
                     <span id="wifi-problems">0 con problemas</span>
                 </div>
                 <div class="wifi-stat">
-                    <h3>TOTAL ESTACIONES</h3>
+                    <h3>TOTAL</h3>
                     <div class="wifi-number" id="wifi-total">104</div>
-                    <span>en todo Buenos Aires</span>
+                    <span>estaciones</span>
                 </div>
             </div>
             
             <div class="wifi-controls">
                 <button onclick="conectarTodas()" class="wifi-btn">
-                    📡 Conectar todas las estaciones
+                    📡 CONECTAR TODAS
                 </button>
-                <button onclick="filtrarMapa('problemas')" class="wifi-btn">
-                    ⚠️ Ver estaciones con problemas
+                <button onclick="filtrarMapa('problemas')" class="wifi-btn btn-problemas">
+                    ⚠️ VER PROBLEMAS
                 </button>
             </div>
         </div>
@@ -1310,11 +469,8 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
         <!-- BOTÓN MODO FIESTA -->
         <div style="text-align: center; margin: 25px 0;">
             <button onclick="mostrarPanelFiestas()" class="fiesta-btn">
-                🎉 ACTIVAR MODO FIESTA - JUEGO DE LUCES
+                🎉 ACTIVAR MODO FIESTA
             </button>
-            <p style="color: #666; margin-top: 10px; font-size: 0.9rem;">
-                Para eventos especiales, navidad, fiestas patrias, etc.
-            </p>
         </div>
         
         <!-- MAPA INTERACTIVO -->
@@ -1329,17 +485,30 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
                 <button class="map-btn" onclick="filtrarMapa('D')">Línea D</button>
                 <button class="map-btn" onclick="filtrarMapa('E')">Línea E</button>
                 <button class="map-btn" onclick="filtrarMapa('H')">Línea H</button>
+                <button class="map-btn" onclick="filtrarMapa('problemas')" style="background: #e74c3c;">
+                    ⚠️ PROBLEMAS
+                </button>
             </div>
             
-            <div id="map">
-                <!-- Mapa se carga aquí -->
-            </div>
+            <div id="map"></div>
             
-            <div style="margin-top: 20px; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-                <div><span style="background: #2ecc71; padding: 5px 15px; border-radius: 5px; color: white;">✅ Normal</span></div>
-                <div><span style="background: #f39c12; padding: 5px 15px; border-radius: 5px; color: white;">⚠️ Alerta</span></div>
-                <div><span style="background: #e74c3c; padding: 5px 15px; border-radius: 5px; color: white;">❌ Crítico</span></div>
-                <div><span style="background: #95a5a6; padding: 5px 15px; border-radius: 5px; color: white;">🔌 Offline</span></div>
+            <div class="leyenda">
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="background: #2ecc71;"></div>
+                    <span>Normal</span>
+                </div>
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="background: #f39c12;"></div>
+                    <span>Alerta</span>
+                </div>
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="background: #e74c3c;"></div>
+                    <span>Crítico</span>
+                </div>
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="background: #95a5a6;"></div>
+                    <span>Offline</span>
+                </div>
             </div>
         </div>
         
@@ -1370,10 +539,448 @@ console.log('🚀 Presiona ENTER en el campo de password para acceso rápido');
     <!-- ========== SCRIPTS ========== -->
     <!-- Leaflet JS para el mapa -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Nuestros archivos JS -->
-    <script src="estaciones.js"></script>
-    <script src="funciones.js"></script>
+    
+    <!-- TODO EL CÓDIGO JAVASCRIPT EN UN SOLO BLOQUE -->
+    <script>
+        // ========== VARIABLES GLOBALES ==========
+        let datosEstaciones = [];
+        let mapa = null;
+        let marcadores = [];
+        let filtroActual = 'todas';
+        let intervaloFiesta = null;
+
+        // ========== LOGIN ==========
+        function checkLogin() {
+            const pass = document.getElementById('password').value;
+            if (pass === 'SUBTE2024' || pass === '') {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('dashboard-content').style.display = 'block';
+                iniciarSistema();
+            } else {
+                alert('Contraseña incorrecta. Usá SUBTE2024');
+            }
+        }
+
+        function logout() {
+            if (intervaloFiesta) {
+                clearInterval(intervaloFiesta);
+                intervaloFiesta = null;
+            }
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+
+        // ========== INICIALIZACIÓN ==========
+        function iniciarSistema() {
+            console.log('✅ Sistema iniciado');
+            cargarDatosCompletos();
+            actualizarEstadisticas();
+            setTimeout(initMap, 600);
+            setInterval(actualizarDatosSimulados, 30000);
+        }
+
+        // ========== CARGA DE DATOS COMPLETOS ==========
+        function cargarDatosCompletos() {
+            datosEstaciones = [
+                // Línea A
+                { id: 'A-01', nombre: 'Plaza de Mayo', linea: 'A', lat: -34.6083, lon: -58.3712, estadoLuces: false, bateria: 87, paneles: 82, regulador: 'OK', wifi: { ssid: 'SUBTE_A_01', señal: 92 } },
+                { id: 'A-02', nombre: 'Perú', linea: 'A', lat: -34.6085, lon: -58.3725, estadoLuces: true, bateria: 72, paneles: 65, regulador: 'OK', wifi: { ssid: 'SUBTE_A_02', señal: 84 } },
+                { id: 'A-03', nombre: 'Piedras', linea: 'A', lat: -34.6090, lon: -58.3740, estadoLuces: false, bateria: 45, paneles: 30, regulador: '⚠️ Revisar', wifi: { ssid: 'SUBTE_A_03', señal: 0 } },
+                { id: 'A-04', nombre: 'Lima', linea: 'A', lat: -34.6095, lon: -58.3755, estadoLuces: true, bateria: 95, paneles: 90, regulador: 'OK', wifi: { ssid: 'SUBTE_A_04', señal: 88 } },
+                { id: 'A-05', nombre: 'Sáenz Peña', linea: 'A', lat: -34.6100, lon: -58.3770, estadoLuces: false, bateria: 33, paneles: 12, regulador: 'FALLA', wifi: { ssid: 'SUBTE_A_05', señal: 0 } },
+                { id: 'A-06', nombre: 'Congreso', linea: 'A', lat: -34.6105, lon: -58.3785, estadoLuces: true, bateria: 89, paneles: 85, regulador: 'OK', wifi: { ssid: 'SUBTE_A_06', señal: 90 } },
+                { id: 'A-07', nombre: 'Pasco', linea: 'A', lat: -34.6110, lon: -58.3800, estadoLuces: true, bateria: 91, paneles: 87, regulador: 'OK', wifi: { ssid: 'SUBTE_A_07', señal: 86 } },
+                { id: 'A-08', nombre: 'Alberti', linea: 'A', lat: -34.6115, lon: -58.3815, estadoLuces: false, bateria: 77, paneles: 72, regulador: 'OK', wifi: { ssid: 'SUBTE_A_08', señal: 79 } },
+                { id: 'A-09', nombre: 'Plaza Miserere', linea: 'A', lat: -34.6120, lon: -58.3830, estadoLuces: true, bateria: 82, paneles: 78, regulador: 'OK', wifi: { ssid: 'SUBTE_A_09', señal: 83 } },
+                { id: 'A-10', nombre: 'Loria', linea: 'A', lat: -34.6125, lon: -58.3845, estadoLuces: true, bateria: 86, paneles: 81, regulador: 'OK', wifi: { ssid: 'SUBTE_A_10', señal: 81 } },
+                { id: 'A-11', nombre: 'Castro Barros', linea: 'A', lat: -34.6130, lon: -58.3860, estadoLuces: true, bateria: 88, paneles: 83, regulador: 'OK', wifi: { ssid: 'SUBTE_A_11', señal: 84 } },
+                { id: 'A-12', nombre: 'Río de Janeiro', linea: 'A', lat: -34.6135, lon: -58.3875, estadoLuces: false, bateria: 79, paneles: 74, regulador: 'OK', wifi: { ssid: 'SUBTE_A_12', señal: 76 } },
+                { id: 'A-13', nombre: 'Acoyte', linea: 'A', lat: -34.6140, lon: -58.3890, estadoLuces: true, bateria: 84, paneles: 79, regulador: 'OK', wifi: { ssid: 'SUBTE_A_13', señal: 82 } },
+                { id: 'A-14', nombre: 'Primera Junta', linea: 'A', lat: -34.6145, lon: -58.3905, estadoLuces: true, bateria: 90, paneles: 86, regulador: 'OK', wifi: { ssid: 'SUBTE_A_14', señal: 88 } },
+                { id: 'A-15', nombre: 'Puán', linea: 'A', lat: -34.6150, lon: -58.3920, estadoLuces: false, bateria: 76, paneles: 71, regulador: 'OK', wifi: { ssid: 'SUBTE_A_15', señal: 73 } },
+                { id: 'A-16', nombre: 'Carabobo', linea: 'A', lat: -34.6155, lon: -58.3935, estadoLuces: true, bateria: 83, paneles: 78, regulador: 'OK', wifi: { ssid: 'SUBTE_A_16', señal: 80 } },
+                { id: 'A-17', nombre: 'San José de Flores', linea: 'A', lat: -34.6160, lon: -58.3950, estadoLuces: true, bateria: 85, paneles: 80, regulador: 'OK', wifi: { ssid: 'SUBTE_A_17', señal: 82 } },
+                { id: 'A-18', nombre: 'San Pedrito', linea: 'A', lat: -34.6165, lon: -58.3965, estadoLuces: false, bateria: 81, paneles: 76, regulador: 'OK', wifi: { ssid: 'SUBTE_A_18', señal: 77 } },
+                // Línea B
+                { id: 'B-01', nombre: 'Leandro N. Alem', linea: 'B', lat: -34.6020, lon: -58.3705, estadoLuces: false, bateria: 93, paneles: 88, regulador: 'OK', wifi: { ssid: 'SUBTE_B_01', señal: 90 } },
+                { id: 'B-02', nombre: 'Florida', linea: 'B', lat: -34.6035, lon: -58.3720, estadoLuces: true, bateria: 78, paneles: 72, regulador: 'OK', wifi: { ssid: 'SUBTE_B_02', señal: 80 } },
+                { id: 'B-03', nombre: 'Carlos Pellegrini', linea: 'B', lat: -34.6040, lon: -58.3740, estadoLuces: true, bateria: 88, paneles: 85, regulador: 'OK', wifi: { ssid: 'SUBTE_B_03', señal: 86 } },
+                { id: 'B-04', nombre: 'Uruguay', linea: 'B', lat: -34.6045, lon: -58.3755, estadoLuces: false, bateria: 79, paneles: 74, regulador: 'OK', wifi: { ssid: 'SUBTE_B_04', señal: 77 } },
+                { id: 'B-05', nombre: 'Callao', linea: 'B', lat: -34.6050, lon: -58.3770, estadoLuces: true, bateria: 96, paneles: 92, regulador: 'OK', wifi: { ssid: 'SUBTE_B_05', señal: 94 } },
+                { id: 'B-06', nombre: 'Pueyrredón (Plaza Once)', linea: 'B', lat: -34.6060, lon: -58.4030, estadoLuces: true, bateria: 68, paneles: 59, regulador: '⚠️ Bajo', wifi: { ssid: 'SUBTE_B_06', señal: 71 } },
+                { id: 'B-07', nombre: 'Carlos Gardel', linea: 'B', lat: -34.6070, lon: -58.4080, estadoLuces: false, bateria: 82, paneles: 77, regulador: 'OK', wifi: { ssid: 'SUBTE_B_07', señal: 79 } },
+                // Línea C
+                { id: 'C-01', nombre: 'Retiro', linea: 'C', lat: -34.5915, lon: -58.3755, estadoLuces: true, bateria: 97, paneles: 94, regulador: 'OK', wifi: { ssid: 'SUBTE_C_01', señal: 95 } },
+                { id: 'C-02', nombre: 'General San Martín', linea: 'C', lat: -34.5950, lon: -58.3760, estadoLuces: true, bateria: 85, paneles: 81, regulador: 'OK', wifi: { ssid: 'SUBTE_C_02', señal: 82 } },
+                { id: 'C-03', nombre: 'Lavalle', linea: 'C', lat: -34.5970, lon: -58.3770, estadoLuces: false, bateria: 74, paneles: 66, regulador: 'OK', wifi: { ssid: 'SUBTE_C_03', señal: 68 } },
+                { id: 'C-04', nombre: 'Diagonal Norte', linea: 'C', lat: -34.6030, lon: -58.3780, estadoLuces: true, bateria: 88, paneles: 83, regulador: 'OK', wifi: { ssid: 'SUBTE_C_04', señal: 86 } },
+                { id: 'C-05', nombre: 'Avenida de Mayo', linea: 'C', lat: -34.6085, lon: -58.3790, estadoLuces: true, bateria: 90, paneles: 86, regulador: 'OK', wifi: { ssid: 'SUBTE_C_05', señal: 88 } },
+                { id: 'C-06', nombre: 'Moreno', linea: 'C', lat: -34.6105, lon: -58.3805, estadoLuces: false, bateria: 69, paneles: 61, regulador: '⚠️ Revisar', wifi: { ssid: 'SUBTE_C_06', señal: 0 } },
+                { id: 'C-07', nombre: 'Independencia', linea: 'C', lat: -34.6150, lon: -58.3820, estadoLuces: true, bateria: 86, paneles: 82, regulador: 'OK', wifi: { ssid: 'SUBTE_C_07', señal: 80 } },
+                { id: 'C-08', nombre: 'San Juan', linea: 'C', lat: -34.6200, lon: -58.3835, estadoLuces: false, bateria: 29, paneles: 9, regulador: 'FALLA', wifi: { ssid: 'SUBTE_C_08', señal: 0 } },
+                { id: 'C-09', nombre: 'Constitución', linea: 'C', lat: -34.6270, lon: -58.3805, estadoLuces: true, bateria: 95, paneles: 91, regulador: 'OK', wifi: { ssid: 'SUBTE_C_09', señal: 93 } }
+            ];
+            console.log(`✅ Cargadas ${datosEstaciones.length} estaciones`);
+        }
+
+        // ========== MAPA ==========
+        function initMap() {
+            if (!document.getElementById('map')) return;
+            mapa = L.map('map').setView([-34.6037, -58.3816], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
+            actualizarMarcadores();
+        }
+
+        function actualizarMarcadores() {
+            if (!mapa) return;
+            if (marcadores.length) marcadores.forEach(m => mapa.removeLayer(m));
+            marcadores = [];
+
+            const filtradas = filtrarEstaciones();
+            
+            filtradas.forEach(e => {
+                let color;
+                if (e.wifi.señal === 0) {
+                    color = '#95a5a6';
+                } else if (e.bateria > 70) {
+                    color = '#2ecc71';
+                } else if (e.bateria > 40) {
+                    color = '#f39c12';
+                } else {
+                    color = '#e74c3c';
+                }
+
+                let icono = L.divIcon({
+                    html: `<div style="background:${color}; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 0 10px rgba(0,0,0,0.3);"></div>`,
+                    iconSize: [20, 20]
+                });
+                
+                let m = L.marker([e.lat, e.lon], { icon: icono }).addTo(mapa)
+                    .bindPopup(`
+                        <b>${e.nombre}</b><br>
+                        Línea ${e.linea}<br>
+                        🔋 ${e.bateria}% | ☀️ ${e.paneles}%<br>
+                        📶 ${e.wifi.señal > 0 ? e.wifi.señal + '%' : 'Desconectado'}<br>
+                        💡 ${e.estadoLuces ? 'ENCENDIDA' : 'APAGADA'}<br>
+                        <button onclick="verDetalles('${e.id}')" style="margin-top:5px; padding:5px 10px; background:#1a237e; color:white; border:none; border-radius:4px; cursor:pointer;">
+                            ⚙️ CONFIGURAR
+                        </button>
+                    `);
+                marcadores.push(m);
+            });
+        }
+
+        function filtrarEstaciones() {
+            if (filtroActual === 'todas') return datosEstaciones;
+            if (filtroActual === 'problemas') {
+                return datosEstaciones.filter(e => 
+                    e.wifi.señal === 0 || 
+                    e.bateria < 40 || 
+                    e.regulador !== 'OK' ||
+                    e.paneles < 30
+                );
+            }
+            return datosEstaciones.filter(e => e.linea === filtroActual);
+        }
+
+        function filtrarMapa(linea) {
+            filtroActual = linea;
+            document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            actualizarMarcadores();
+        }
+
+        // ========== ESTADÍSTICAS ==========
+        function actualizarEstadisticas() {
+            let total = datosEstaciones.length;
+            let conectadas = datosEstaciones.filter(e => e.wifi.señal > 0).length;
+            let lucesEncendidas = datosEstaciones.filter(e => e.estadoLuces).length;
+            
+            document.getElementById('wifi-connected').innerText = conectadas;
+            document.getElementById('wifi-disconnected').innerText = total - conectadas;
+            document.getElementById('wifi-percentage').innerText = Math.round((conectadas / total) * 100) + '%';
+            
+            document.getElementById('estado-general').innerHTML = `
+                <div style="display:flex; gap:15px; justify-content:center; flex-wrap:wrap;">
+                    <span style="background:#2ecc71; color:white; padding:8px 15px; border-radius:20px;">
+                        ✅ ${conectadas} de ${total} conectadas
+                    </span>
+                    <span style="background:#f39c12; color:white; padding:8px 15px; border-radius:20px;">
+                        💡 ${lucesEncendidas} luces encendidas
+                    </span>
+                </div>
+            `;
+        }
+
+        function conectarTodas() {
+            datosEstaciones.forEach(e => {
+                e.wifi.señal = 85 + Math.floor(Math.random() * 10);
+                e.bateria = 80 + Math.floor(Math.random() * 15);
+                e.paneles = 75 + Math.floor(Math.random() * 15);
+                e.regulador = 'OK';
+            });
+            actualizarEstadisticas();
+            actualizarMarcadores();
+            mostrarNotificacion('✅ Todas las estaciones conectadas', '#2ecc71');
+        }
+
+        // ========== MODO FIESTA SIMPLIFICADO ==========
+        function mostrarPanelFiestas() {
+            const modalAnterior = document.querySelector('.modal-backdrop');
+            if (modalAnterior) modalAnterior.remove();
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal-backdrop';
+            modal.onclick = () => modal.remove();
+
+            const contenido = document.createElement('div');
+            contenido.className = 'modal-content';
+            contenido.onclick = e => e.stopPropagation();
+            contenido.innerHTML = `
+                <h2 style="color:#1a237e; text-align:center; margin-bottom:20px;">🎉 MODO FIESTA</h2>
+                <p style="text-align:center; color:#666; margin-bottom:20px;">Configurá el parpadeo de las luces</p>
+                
+                <div style="background:#f8f9fa; padding:20px; border-radius:15px; margin-bottom:20px;">
+                    <h3 style="color:#1a237e; margin-bottom:15px;">⏱️ DURACIÓN</h3>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                        <button class="duracion-btn" onclick="seleccionarDuracion(30, this)">30 seg</button>
+                        <button class="duracion-btn" onclick="seleccionarDuracion(60, this)">1 min</button>
+                        <button class="duracion-btn" onclick="seleccionarDuracion(300, this)">5 min</button>
+                        <button class="duracion-btn" onclick="seleccionarDuracion(0, this)">∞ Manual</button>
+                    </div>
+                    <div>
+                        <label style="color:#5c6bc0;">O personalizado (segundos):</label>
+                        <input type="number" id="duracionPersonalizada" min="5" max="7200" placeholder="Ej: 120" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:6px; margin-top:5px;">
+                    </div>
+                </div>
+
+                <div style="background:#f8f9fa; padding:20px; border-radius:15px; margin-bottom:20px;">
+                    <h3 style="color:#1a237e; margin-bottom:15px;">⚡ VELOCIDAD DE INTERMITENCIA</h3>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                        <button class="velocidad-btn" onclick="seleccionarVelocidad(0.5, this)">🐢 Lenta (0.5 Hz)</button>
+                        <button class="velocidad-btn" onclick="seleccionarVelocidad(1, this)">⚡ Normal (1 Hz)</button>
+                        <button class="velocidad-btn" onclick="seleccionarVelocidad(2, this)">🚀 Rápida (2 Hz)</button>
+                        <button class="velocidad-btn" onclick="seleccionarVelocidad(5, this)">💨 Muy rápida (5 Hz)</button>
+                    </div>
+                    <div>
+                        <label style="color:#5c6bc0;">Velocidad personalizada (Hz):</label>
+                        <input type="number" id="velocidadPersonalizada" min="0.2" max="10" step="0.1" placeholder="Ej: 1.5" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:6px; margin-top:5px;">
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:15px; margin-top:25px;">
+                    <button onclick="iniciarFiesta()" style="flex:2; padding:15px; background:#2ecc71; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        🎉 INICIAR FIESTA
+                    </button>
+                    <button onclick="detenerFiesta(); modal.remove();" style="flex:1; padding:15px; background:#e74c3c; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        ⏹️ DETENER
+                    </button>
+                    <button onclick="modal.remove()" style="flex:1; padding:15px; background:#666; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        ❌ CANCELAR
+                    </button>
+                </div>
+            `;
+
+            modal.appendChild(contenido);
+            document.body.appendChild(modal);
+
+            window.duracionFiesta = 60;
+            window.velocidadFiesta = 1;
+        }
+
+        function seleccionarDuracion(segundos, btn) {
+            window.duracionFiesta = segundos;
+            document.querySelectorAll('.duracion-btn').forEach(b => b.classList.remove('seleccionado'));
+            btn.classList.add('seleccionado');
+            document.getElementById('duracionPersonalizada').value = '';
+        }
+
+        function seleccionarVelocidad(velocidad, btn) {
+            window.velocidadFiesta = velocidad;
+            document.querySelectorAll('.velocidad-btn').forEach(b => b.classList.remove('seleccionado'));
+            btn.classList.add('seleccionado');
+            document.getElementById('velocidadPersonalizada').value = '';
+        }
+
+        function iniciarFiesta() {
+            const durPersonalizada = document.getElementById('duracionPersonalizada')?.value;
+            if (durPersonalizada && durPersonalizada > 0) {
+                window.duracionFiesta = parseInt(durPersonalizada);
+            }
+            
+            const velPersonalizada = document.getElementById('velocidadPersonalizada')?.value;
+            if (velPersonalizada && velPersonalizada > 0) {
+                window.velocidadFiesta = parseFloat(velPersonalizada);
+            }
+
+            const duracion = window.duracionFiesta || 60;
+            const velocidad = window.velocidadFiesta || 1;
+
+            window.estadosOriginales = datosEstaciones.map(e => e.estadoLuces);
+
+            if (intervaloFiesta) {
+                clearInterval(intervaloFiesta);
+            }
+
+            let encendido = false;
+            intervaloFiesta = setInterval(() => {
+                encendido = !encendido;
+                
+                datosEstaciones.forEach(e => {
+                    if (e.wifi.señal > 0) {
+                        e.estadoLuces = encendido;
+                    }
+                });
+                
+                actualizarMarcadores();
+                actualizarEstadisticas();
+                
+            }, 1000 / velocidad);
+
+            const duracionTexto = duracion === 0 ? 'manual' : duracion + ' segundos';
+            mostrarNotificacion(`🎉 Fiesta iniciada: ${velocidad}Hz, ${duracionTexto}`, '#9b59b6');
+
+            if (duracion > 0) {
+                setTimeout(() => {
+                    detenerFiesta();
+                }, duracion * 1000);
+            }
+
+            document.querySelector('.modal-backdrop')?.remove();
+        }
+
+        function detenerFiesta() {
+            if (intervaloFiesta) {
+                clearInterval(intervaloFiesta);
+                intervaloFiesta = null;
+            }
+            
+            document.body.style.background = 'linear-gradient(135deg, #1a237e 0%, #311b92 100%)';
+            
+            if (window.estadosOriginales) {
+                datosEstaciones.forEach((e, i) => {
+                    if (i < window.estadosOriginales.length) {
+                        e.estadoLuces = window.estadosOriginales[i];
+                    }
+                });
+            } else {
+                datosEstaciones.forEach(e => e.estadoLuces = false);
+            }
+            
+            actualizarMarcadores();
+            actualizarEstadisticas();
+            mostrarNotificacion('⏹️ Modo fiesta detenido', '#95a5a6');
+        }
+
+        // ========== CONFIGURACIÓN WIFI ==========
+        function verDetalles(id) {
+            const e = datosEstaciones.find(e => e.id === id);
+            if (!e) return;
+
+            const modal = document.createElement('div');
+            modal.className = 'modal-backdrop';
+            modal.onclick = () => modal.remove();
+
+            const contenido = document.createElement('div');
+            contenido.className = 'modal-content';
+            contenido.onclick = e => e.stopPropagation();
+            contenido.innerHTML = `
+                <h2 style="color:#1a237e; text-align:center;">⚙️ ${e.nombre}</h2>
+                <p style="text-align:center; color:#666;">Línea ${e.linea} | ID: ${e.id}</p>
+
+                <div style="background:#f0f8ff; padding:15px; border-radius:10px; margin-bottom:20px;">
+                    <p><strong>🔋 Batería:</strong> ${e.bateria}%</p>
+                    <p><strong>☀️ Paneles:</strong> ${e.paneles}%</p>
+                    <p><strong>⚡ Regulador:</strong> ${e.regulador}</p>
+                    <p><strong>📶 WiFi:</strong> ${e.wifi.señal}%</p>
+                </div>
+
+                <div style="background:#f8f9fa; padding:20px; border-radius:10px; margin-bottom:20px;">
+                    <h3 style="color:#1a237e; margin-bottom:15px;">📡 CONFIGURACIÓN WIFI</h3>
+                    
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; margin-bottom:5px; color:#5c6bc0;">SSID (nombre de red):</label>
+                        <input type="text" id="ssid-${e.id}" value="${e.wifi.ssid}" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:6px;">
+                    </div>
+                    
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; margin-bottom:5px; color:#5c6bc0;">Contraseña:</label>
+                        <input type="password" id="pass-${e.id}" placeholder="Ingrese contraseña" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:6px;">
+                    </div>
+                    
+                    <button onclick="guardarWifi('${e.id}')" style="width:100%; padding:12px; background:#3498db; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
+                        💾 GUARDAR CONFIGURACIÓN
+                    </button>
+                </div>
+
+                <div style="text-align:center; margin-top:20px;">
+                    <button class="close-btn" onclick="modal.remove()">CERRAR</button>
+                </div>
+            `;
+
+            modal.appendChild(contenido);
+            document.body.appendChild(modal);
+        }
+
+        function guardarWifi(id) {
+            const ssid = document.getElementById(`ssid-${id}`)?.value.trim();
+            const pass = document.getElementById(`pass-${id}`)?.value.trim();
+            const e = datosEstaciones.find(e => e.id === id);
+            
+            if (!ssid || !pass) {
+                mostrarNotificacion('❌ Completá SSID y contraseña', '#e74c3c');
+                return;
+            }
+            
+            e.wifi.ssid = ssid;
+            e.wifi.señal = 85 + Math.floor(Math.random() * 10);
+            mostrarNotificacion(`✅ WiFi configurado en ${e.nombre}`, '#2ecc71');
+            actualizarEstadisticas();
+            actualizarMarcadores();
+            document.querySelector('.modal-backdrop')?.remove();
+        }
+
+        // ========== NOTIFICACIONES ==========
+        function mostrarNotificacion(msg, color) {
+            const n = document.createElement('div');
+            n.className = 'notificacion';
+            n.style.background = color;
+            n.textContent = msg;
+            document.body.appendChild(n);
+            setTimeout(() => n.remove(), 4000);
+        }
+
+        // ========== SIMULACIÓN ==========
+        function actualizarDatosSimulados() {
+            datosEstaciones.forEach(e => {
+                if (Math.random() > 0.9) {
+                    e.wifi.señal = e.wifi.señal > 0 ? 0 : 80;
+                }
+                if (e.wifi.señal > 0) {
+                    e.bateria = Math.min(100, Math.max(0, e.bateria + (Math.random() * 4 - 2)));
+                    e.paneles = Math.min(100, Math.max(0, e.paneles + (Math.random() * 4 - 2)));
+                    e.regulador = e.bateria > 40 && e.paneles > 30 ? 'OK' : (e.bateria > 20 ? '⚠️ Revisar' : 'FALLA');
+                }
+            });
+            actualizarEstadisticas();
+            actualizarMarcadores();
+        }
+
+        // ========== CSS ADICIONAL ==========
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .close-btn { background:#666; color:white; padding:10px 30px; border:none; border-radius:8px; cursor:pointer; }
+            .map-btn.active { background:#2ecc71 !important; }
+            .notificacion { position:fixed; top:20px; right:20px; color:white; padding:15px 25px; border-radius:10px; z-index:3000; font-weight:bold; animation:slideIn 0.5s; box-shadow:0 5px 15px rgba(0,0,0,0.3); }
+            @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+            .duracion-btn, .velocidad-btn { padding:12px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; color:white; }
+            .duracion-btn { background:#1a237e; }
+            .velocidad-btn { background:#5c6bc0; }
+            .duracion-btn.seleccionado, .velocidad-btn.seleccionado { border:4px solid #f39c12; }
+        `;
+        document.head.appendChild(style);
+
+        console.log('✅ Sistema de Control Subtes BA - Versión estable');
+    </script>
 </body>
 </html>
-
-
