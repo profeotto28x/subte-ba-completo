@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control Subtes Buenos Aires</title>
+    <title>Control Subtes Buenos Aires - Sistema Otto</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { background: linear-gradient(135deg, #1a237e 0%, #311b92 100%); min-height: 100vh; color: #333; }
 
-        /* BORDES SOLICITADOS */
+        /* LOS BORDES SOLICITADOS */
         .login-card, .dashboard-header, .wifi-panel, .wifi-stat, .map-container, #map, .fiesta-btn {
             border: 2px solid #333 !important;
         }
@@ -16,18 +16,19 @@
         #login-screen { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
         .login-card { background: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 40px; width: 100%; max-width: 400px; text-align: center; }
         .input-group { margin-bottom: 20px; text-align: left; }
-        .input-group input { width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 10px; }
-        .login-btn { width: 100%; padding: 16px; background: #1a237e; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .input-group label { display: block; margin-bottom: 8px; color: #1a237e; font-weight: 500; }
+        .input-group input { width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; }
+        .login-btn { width: 100%; padding: 16px; background: #1a237e; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
 
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         #dashboard-content { display: none; }
-        .dashboard-header { background: white; border-radius: 20px; padding: 25px 30px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .dashboard-header { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         .wifi-panel, .map-container { background: white; border-radius: 15px; padding: 25px; margin: 20px 0; }
-        .wifi-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .wifi-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         .wifi-stat { text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px; }
         .wifi-number { font-size: 2.5rem; font-weight: bold; color: #1a237e; }
-        .fiesta-btn { background: linear-gradient(135deg, #FF0000, #00FF00, #0000FF); color: white; padding: 15px 30px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; animation: pulse 2s infinite; }
-        #map { height: 450px; width: 100%; border-radius: 10px; margin-top: 20px; }
+        .fiesta-btn { background: linear-gradient(135deg, #FF0000, #00FF00, #0000FF); color: white; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; animation: pulse 2s infinite; margin-bottom: 20px; }
+        #map { height: 500px; width: 100%; border-radius: 10px; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -35,9 +36,10 @@
 <body>
     <div id="login-screen">
         <div class="login-card">
-            <h2>🚇 SUBTES BA</h2>
+            <h2>🚇 SISTEMA OTTO</h2>
             <div class="input-group">
-                <input type="password" id="password" placeholder="Contraseña">
+                <label>Contraseña</label>
+                <input type="password" id="password" placeholder="Ingrese clave">
             </div>
             <button class="login-btn" onclick="checkLogin()">INGRESAR</button>
         </div>
@@ -45,15 +47,15 @@
 
     <div id="dashboard-content" class="container">
         <div class="dashboard-header">
-            <div><h1>SISTEMA OTTO</h1><p>104 Estaciones</p></div>
-            <button onclick="location.reload()" style="padding:10px; cursor:pointer">Cerrar</button>
+            <div><h1>CONTROL CENTRAL</h1><p>Red Subtes Buenos Aires</p></div>
+            <button onclick="location.reload()" style="padding:10px; cursor:pointer">Salir</button>
         </div>
         <div class="wifi-panel">
             <div class="wifi-stats">
-                <div class="wifi-stat"><h3>TOTAL</h3><div class="wifi-number">104</div></div>
+                <div class="wifi-stat"><h3>ESTACIONES TOTALES</h3><div class="wifi-number">104</div></div>
             </div>
         </div>
-        <button class="fiesta-btn">🎉 MODO FIESTA</button>
+        <button class="fiesta-btn">🎉 MODO FIESTA ACTIVADO</button>
         <div class="map-container"><div id="map"></div></div>
     </div>
 
@@ -142,20 +144,27 @@
             { id: 'H-02', nombre: 'Las Heras', linea: 'H', lat: -34.5870, lon: -58.3970 },
             { id: 'H-03', nombre: 'Santa Fe', linea: 'H', lat: -34.5920, lon: -58.4020 },
             { id: 'H-04', nombre: 'Córdoba', linea: 'H', lat: -34.5970, lon: -58.4070 },
-            { id: 'H-05', nombre: 'Corrientes', linea: 'H', lat: -34.6030, lon: -58.4100 }
+            { id: 'H-05', nombre: 'Corrientes', linea: 'H', lat: -34.6030, lon: -58.4100 },
+            { id: 'H-06', nombre: 'Once - 30 de Diciembre', linea: 'H', lat: -34.6090, lon: -58.4070 },
+            { id: 'H-07', nombre: 'Venezuela', linea: 'H', lat: -34.6140, lon: -58.4050 },
+            { id: 'H-08', nombre: 'Humberto I', linea: 'H', lat: -34.6220, lon: -58.4020 },
+            { id: 'H-09', nombre: 'Inclán', linea: 'H', lat: -34.6290, lon: -58.4000 },
+            { id: 'H-10', nombre: 'Caseros', linea: 'H', lat: -34.6350, lon: -58.3980 },
+            { id: 'H-11', nombre: 'Parque Patricios', linea: 'H', lat: -34.6390, lon: -58.4060 },
+            { id: 'H-12', nombre: 'Hospitales', linea: 'H', lat: -34.6420, lon: -58.4120 }
         ];
 
         function checkLogin() {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('dashboard-content').style.display = 'block';
-            initMap();
+            setTimeout(initMap, 100);
         }
 
         function initMap() {
             const map = L.map('map').setView([-34.6037, -58.3816], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             datosEstaciones.forEach(est => {
-                L.marker([est.lat, est.lon]).addTo(map).bindPopup(`<b>${est.nombre}</b>`);
+                L.marker([est.lat, est.lon]).addTo(map).bindPopup(`<b>${est.nombre}</b><br>Línea ${est.linea}`);
             });
         }
     </script>
