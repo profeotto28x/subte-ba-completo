@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Otto - Control Subtes</title>
+    <title>Control Subtes Buenos Aires</title>
     <style>
         /* ========== ESTILOS GENERALES ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -12,6 +12,17 @@
             background: linear-gradient(135deg, #1a237e 0%, #311b92 100%);
             min-height: 100vh;
             color: #333;
+        }
+
+        /* ========== AJUSTE DE BORDES SOLICITADO ========== */
+        .login-card, 
+        .dashboard-header, 
+        .wifi-panel, 
+        .wifi-stat, 
+        .map-container, 
+        #map, 
+        .info-box {
+            border: 2px solid #333 !important; /* El borde que te gustó */
         }
 
         /* ========== PANTALLA LOGIN ========== */
@@ -69,6 +80,7 @@
             cursor: pointer;
             margin-top: 10px;
         }
+        .login-btn:hover { transform: translateY(-2px); }
 
         /* ========== DASHBOARD ========== */
         .container {
@@ -90,6 +102,9 @@
         .header-left h1 {
             color: #1a237e;
             font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .logout-btn {
             padding: 10px 20px;
@@ -127,6 +142,26 @@
             color: #1a237e;
         }
 
+        /* ========== BOTÓN FIESTA ========== */
+        .fiesta-btn {
+            background: linear-gradient(135deg, #FF0000, #00FF00, #0000FF);
+            color: white;
+            border: 2px solid #333;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 0;
+            width: 100%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
         /* ========== MAPA ========== */
         .map-container {
             background: white;
@@ -136,184 +171,84 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         #map {
-            height: 500px;
+            height: 450px;
             width: 100%;
             border-radius: 10px;
-            border: 2px solid #e8eaf6;
             margin-top: 20px;
-        }
-        .map-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .map-btn {
-            padding: 8px 16px;
-            background: #1a237e;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        .map-btn.active { background: #2ecc71; }
-
-        /* ========== LEYENDA (Puntos con borde blanco) ========== */
-        .leyenda {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-        .leyenda-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .leyenda-color {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            border: 3px solid white; /* Borde blanco definido */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-
     <div id="login-screen">
         <div class="login-card">
-            <h2 class="login-title">🚇 SISTEMA OTTO</h2>
-            <p class="login-subtitle">Control de Estaciones Buenos Aires</p>
+            <h2 class="login-title">🚇 SUBTES BUENOS AIRES</h2>
+            <p class="login-subtitle">Sistema Inteligente de Control</p>
             <div class="input-group">
-                <label>Contraseña</label>
-                <input type="password" id="password" placeholder="SUBTE2024">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" placeholder="Ingrese la contraseña">
             </div>
-            <button class="login-btn" onclick="checkLogin()">🔐 INGRESAR</button>
+            <button class="login-btn" onclick="checkLogin()">🔐 INGRESAR AL SISTEMA</button>
         </div>
     </div>
 
     <div id="dashboard-content" class="container">
         <div class="dashboard-header">
             <div class="header-left">
-                <h1>🚇 CONTROL CENTRAL - SISTEMA OTTO</h1>
-                <p>Monitoreo de 150+ Estaciones</p>
+                <h1>🚇 CONTROL CENTRAL SUBTES BA</h1>
+                <p>Sistema de iluminación solar autónoma - 104 Estaciones</p>
             </div>
-            <button class="logout-btn" onclick="location.reload()">🔓 Salir</button>
+            <button class="logout-btn" onclick="location.reload()">🔓 Cerrar sesión</button>
         </div>
-
+        
         <div class="wifi-panel">
+            <h2>📡 CONTROL DE ESTACIONES</h2>
             <div class="wifi-stats">
                 <div class="wifi-stat">
                     <h3>CONECTADAS</h3>
-                    <div class="wifi-number" id="wifi-connected">104</div>
+                    <div class="wifi-number">98</div>
                 </div>
                 <div class="wifi-stat">
-                    <h3>TOTAL ESTACIONES</h3>
-                    <div class="wifi-number">150+</div>
+                    <h3>TOTAL</h3>
+                    <div class="wifi-number">104</div>
                 </div>
             </div>
         </div>
-
+        
+        <button class="fiesta-btn">🎉 ACTIVAR MODO FIESTA</button>
+        
         <div class="map-container">
-            <div class="map-controls">
-                <button class="map-btn active" onclick="filtrarMapa('todas')">Todas</button>
-                <button class="map-btn" onclick="filtrarMapa('A')">Línea A</button>
-                <button class="map-btn" onclick="filtrarMapa('B')">Línea B</button>
-                <button class="map-btn" onclick="filtrarMapa('C')">Línea C</button>
-                <button class="map-btn" onclick="filtrarMapa('D')">Línea D</button>
-                <button class="map-btn" onclick="filtrarMapa('H')">Línea H</button>
-            </div>
+            <h2>🗺️ MAPA DE ESTACIONES</h2>
             <div id="map"></div>
-            
-            <div class="leyenda">
-                <div class="leyenda-item"><div class="leyenda-color" style="background:#2ecc71;"></div><span>Operativo</span></div>
-                <div class="leyenda-item"><div class="leyenda-color" style="background:#e74c3c;"></div><span>Falla</span></div>
-                <div class="leyenda-item"><div class="leyenda-color" style="background:#95a5a6;"></div><span>Offline</span></div>
-            </div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let mapa = null;
-        let marcadores = [];
-        
-        // Datos de ejemplo (puedes seguir agregando hasta las 150)
-        const datosEstaciones = [
-            { nombre: 'Plaza de Mayo', linea: 'A', lat: -34.6083, lon: -58.3712, estado: 'OK' },
-            { nombre: 'Perú', linea: 'A', lat: -34.6085, lon: -58.3725, estado: 'OK' },
-            { nombre: 'Piedras', linea: 'A', lat: -34.6090, lon: -58.3740, estado: 'Falla' },
-            { nombre: 'Leandro N. Alem', linea: 'B', lat: -34.6020, lon: -58.3705, estado: 'OK' },
-            { nombre: 'Florida', linea: 'B', lat: -34.6035, lon: -58.3720, estado: 'OK' },
-            { nombre: 'Retiro', linea: 'C', lat: -34.5915, lon: -58.3755, estado: 'OK' },
-            { nombre: 'Catedral', linea: 'D', lat: -34.6077, lon: -58.3731, estado: 'OK' },
-            { nombre: 'Facultad de Derecho', linea: 'H', lat: -34.5820, lon: -58.3920, estado: 'OK' }
-        ];
-
         function checkLogin() {
             const pass = document.getElementById('password').value;
             if (pass === 'SUBTE2024' || pass === '') {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('dashboard-content').style.display = 'block';
-                setTimeout(initMap, 300);
+                initMap();
             } else {
                 alert('Contraseña incorrecta');
             }
         }
 
         function initMap() {
-            if (mapa) return;
-            mapa = L.map('map').setView([-34.6037, -58.3816], 13);
+            const map = L.map('map').setView([-34.6037, -58.3816], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(mapa);
-
-            dibujarPuntos('todas');
-        }
-
-        function dibujarPuntos(filtro) {
-            // Limpiar marcadores anteriores
-            marcadores.forEach(m => mapa.removeLayer(m));
-            marcadores = [];
+            // Aquí podés seguir pegando tu lista de datosEstaciones
+            const datosEstaciones = [
+                { id: 'A-01', nombre: 'Plaza de Mayo', lat: -34.6083, lon: -58.3712 },
+                { id: 'H-05', nombre: 'Corrientes', lat: -34.6030, lon: -58.4100 }
+            ];
 
             datosEstaciones.forEach(est => {
-                if (filtro === 'todas' || est.linea === filtro) {
-                    
-                    // Lógica de colores
-                    let colorPunto = '#2ecc71';
-                    if (est.estado === 'Falla') colorPunto = '#e74c3c';
-
-                    // CREACIÓN DEL CÍRCULO CON BORDE BLANCO DEFINIDO
-                    const marcador = L.circleMarker([est.lat, est.lon], {
-                        radius: 8,
-                        fillColor: colorPunto,
-                        color: "#ffffff",      // BORDE BLANCO
-                        weight: 3,             // GROSOR DEL BORDE
-                        opacity: 1,            // OPACIDAD BORDE
-                        fillOpacity: 0.9       // OPACIDAD RELLENO
-                    });
-
-                    marcador.bindPopup(`<b>Estación:</b> ${est.nombre}<br><b>Línea:</b> ${est.linea}`);
-                    marcador.addTo(mapa);
-                    marcadores.push(marcador);
-                }
+                L.marker([est.lat, est.lon]).addTo(map).bindPopup(est.nombre);
             });
-        }
-
-        function filtrarMapa(linea) {
-            // Actualizar botones
-            document.querySelectorAll('.map-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if(btn.innerText.includes(linea) || (linea === 'todas' && btn.innerText === 'Todas')) {
-                    btn.classList.add('active');
-                }
-            });
-            dibujarPuntos(linea);
         }
     </script>
 </body>
