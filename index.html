@@ -5,249 +5,157 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control Subtes Buenos Aires</title>
     <style>
-        /* ========== ESTILOS GENERALES ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        
-        body {
-            background: linear-gradient(135deg, #1a237e 0%, #311b92 100%);
-            min-height: 100vh;
-            color: #333;
+        body { background: linear-gradient(135deg, #1a237e 0%, #311b92 100%); min-height: 100vh; color: #333; }
+
+        /* BORDES SOLICITADOS */
+        .login-card, .dashboard-header, .wifi-panel, .wifi-stat, .map-container, #map, .fiesta-btn {
+            border: 2px solid #333 !important;
         }
 
-        /* ========== AJUSTE DE BORDES SOLICITADO ========== */
-        .login-card, 
-        .dashboard-header, 
-        .wifi-panel, 
-        .wifi-stat, 
-        .map-container, 
-        #map, 
-        .info-box {
-            border: 2px solid #333 !important; /* El borde que te gustó */
-        }
+        #login-screen { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .login-card { background: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 40px; width: 100%; max-width: 400px; text-align: center; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group input { width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 10px; }
+        .login-btn { width: 100%; padding: 16px; background: #1a237e; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
 
-        /* ========== PANTALLA LOGIN ========== */
-        #login-screen {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .login-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            text-align: center;
-        }
-        .login-title {
-            color: #1a237e;
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-        }
-        .login-subtitle {
-            color: #5c6bc0;
-            margin-bottom: 30px;
-        }
-        .input-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #1a237e;
-            font-weight: 500;
-        }
-        .input-group input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            font-size: 16px;
-        }
-        .login-btn {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #1a237e, #311b92);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .login-btn:hover { transform: translateY(-2px); }
-
-        /* ========== DASHBOARD ========== */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         #dashboard-content { display: none; }
-        .dashboard-header {
-            background: white;
-            border-radius: 20px;
-            padding: 25px 30px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header-left h1 {
-            color: #1a237e;
-            font-size: 1.8rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .logout-btn {
-            padding: 10px 20px;
-            background: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        /* ========== ESTADÍSTICAS ========== */
-        .wifi-panel {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin: 20px 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        .wifi-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-        .wifi-stat {
-            text-align: center;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-        .wifi-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #1a237e;
-        }
-
-        /* ========== BOTÓN FIESTA ========== */
-        .fiesta-btn {
-            background: linear-gradient(135deg, #FF0000, #00FF00, #0000FF);
-            color: white;
-            border: 2px solid #333;
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            margin: 10px 0;
-            width: 100%;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
-
-        /* ========== MAPA ========== */
-        .map-container {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin: 20px 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        #map {
-            height: 450px;
-            width: 100%;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
+        .dashboard-header { background: white; border-radius: 20px; padding: 25px 30px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .wifi-panel, .map-container { background: white; border-radius: 15px; padding: 25px; margin: 20px 0; }
+        .wifi-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .wifi-stat { text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px; }
+        .wifi-number { font-size: 2.5rem; font-weight: bold; color: #1a237e; }
+        .fiesta-btn { background: linear-gradient(135deg, #FF0000, #00FF00, #0000FF); color: white; padding: 15px 30px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; animation: pulse 2s infinite; }
+        #map { height: 450px; width: 100%; border-radius: 10px; margin-top: 20px; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
     <div id="login-screen">
         <div class="login-card">
-            <h2 class="login-title">🚇 SUBTES BUENOS AIRES</h2>
-            <p class="login-subtitle">Sistema Inteligente de Control</p>
+            <h2>🚇 SUBTES BA</h2>
             <div class="input-group">
-                <label for="password">Contraseña</label>
-                <input type="password" id="password" placeholder="Ingrese la contraseña">
+                <input type="password" id="password" placeholder="Contraseña">
             </div>
-            <button class="login-btn" onclick="checkLogin()">🔐 INGRESAR AL SISTEMA</button>
+            <button class="login-btn" onclick="checkLogin()">INGRESAR</button>
         </div>
     </div>
 
     <div id="dashboard-content" class="container">
         <div class="dashboard-header">
-            <div class="header-left">
-                <h1>🚇 CONTROL CENTRAL SUBTES BA</h1>
-                <p>Sistema de iluminación solar autónoma - 104 Estaciones</p>
-            </div>
-            <button class="logout-btn" onclick="location.reload()">🔓 Cerrar sesión</button>
+            <div><h1>SISTEMA OTTO</h1><p>104 Estaciones</p></div>
+            <button onclick="location.reload()" style="padding:10px; cursor:pointer">Cerrar</button>
         </div>
-        
         <div class="wifi-panel">
-            <h2>📡 CONTROL DE ESTACIONES</h2>
             <div class="wifi-stats">
-                <div class="wifi-stat">
-                    <h3>CONECTADAS</h3>
-                    <div class="wifi-number">98</div>
-                </div>
-                <div class="wifi-stat">
-                    <h3>TOTAL</h3>
-                    <div class="wifi-number">104</div>
-                </div>
+                <div class="wifi-stat"><h3>TOTAL</h3><div class="wifi-number">104</div></div>
             </div>
         </div>
-        
-        <button class="fiesta-btn">🎉 ACTIVAR MODO FIESTA</button>
-        
-        <div class="map-container">
-            <h2>🗺️ MAPA DE ESTACIONES</h2>
-            <div id="map"></div>
-        </div>
+        <button class="fiesta-btn">🎉 MODO FIESTA</button>
+        <div class="map-container"><div id="map"></div></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        const datosEstaciones = [
+            { id: 'A-01', nombre: 'Plaza de Mayo', linea: 'A', lat: -34.6083, lon: -58.3712 },
+            { id: 'A-02', nombre: 'Perú', linea: 'A', lat: -34.6085, lon: -58.3725 },
+            { id: 'A-03', nombre: 'Piedras', linea: 'A', lat: -34.6090, lon: -58.3740 },
+            { id: 'A-04', nombre: 'Lima', linea: 'A', lat: -34.6095, lon: -58.3755 },
+            { id: 'A-05', nombre: 'Sáenz Peña', linea: 'A', lat: -34.6100, lon: -58.3770 },
+            { id: 'A-06', nombre: 'Congreso', linea: 'A', lat: -34.6105, lon: -58.3785 },
+            { id: 'A-07', nombre: 'Pasco', linea: 'A', lat: -34.6110, lon: -58.3800 },
+            { id: 'A-08', nombre: 'Alberti', linea: 'A', lat: -34.6115, lon: -58.3815 },
+            { id: 'A-09', nombre: 'Plaza Miserere', linea: 'A', lat: -34.6120, lon: -58.3830 },
+            { id: 'A-10', nombre: 'Loria', linea: 'A', lat: -34.6125, lon: -58.3845 },
+            { id: 'A-11', nombre: 'Castro Barros', linea: 'A', lat: -34.6130, lon: -58.3860 },
+            { id: 'A-12', nombre: 'Río de Janeiro', linea: 'A', lat: -34.6135, lon: -58.3875 },
+            { id: 'A-13', nombre: 'Acoyte', linea: 'A', lat: -34.6140, lon: -58.3890 },
+            { id: 'A-14', nombre: 'Primera Junta', linea: 'A', lat: -34.6145, lon: -58.3905 },
+            { id: 'A-15', nombre: 'Puán', linea: 'A', lat: -34.6150, lon: -58.3920 },
+            { id: 'A-16', nombre: 'Carabobo', linea: 'A', lat: -34.6155, lon: -58.3935 },
+            { id: 'A-17', nombre: 'San José de Flores', linea: 'A', lat: -34.6160, lon: -58.3950 },
+            { id: 'A-18', nombre: 'San Pedrito', linea: 'A', lat: -34.6165, lon: -58.3965 },
+            { id: 'B-01', nombre: 'Leandro N. Alem', linea: 'B', lat: -34.6020, lon: -58.3705 },
+            { id: 'B-02', nombre: 'Florida', linea: 'B', lat: -34.6035, lon: -58.3720 },
+            { id: 'B-03', nombre: 'Carlos Pellegrini', linea: 'B', lat: -34.6040, lon: -58.3740 },
+            { id: 'B-04', nombre: 'Uruguay', linea: 'B', lat: -34.6045, lon: -58.3755 },
+            { id: 'B-05', nombre: 'Callao', linea: 'B', lat: -34.6050, lon: -58.3770 },
+            { id: 'B-06', nombre: 'Pueyrredón', linea: 'B', lat: -34.6060, lon: -58.4030 },
+            { id: 'B-07', nombre: 'Carlos Gardel', linea: 'B', lat: -34.6070, lon: -58.4080 },
+            { id: 'B-08', nombre: 'Medrano', linea: 'B', lat: -34.6080, lon: -58.4140 },
+            { id: 'B-09', nombre: 'Ángel Gallardo', linea: 'B', lat: -34.6090, lon: -58.4200 },
+            { id: 'B-10', nombre: 'Malabia', linea: 'B', lat: -34.5900, lon: -58.4300 },
+            { id: 'B-11', nombre: 'Dorrego', linea: 'B', lat: -34.5870, lon: -58.4350 },
+            { id: 'B-12', nombre: 'Federico Lacroze', linea: 'B', lat: -34.5820, lon: -58.4400 },
+            { id: 'B-13', nombre: 'Tronador', linea: 'B', lat: -34.5770, lon: -58.4450 },
+            { id: 'B-14', nombre: 'De los Incas', linea: 'B', lat: -34.5720, lon: -58.4500 },
+            { id: 'B-15', nombre: 'Echeverría', linea: 'B', lat: -34.5670, lon: -58.4550 },
+            { id: 'B-16', nombre: 'Juan Manuel de Rosas', linea: 'B', lat: -34.5620, lon: -58.4600 },
+            { id: 'B-17', nombre: 'Urquiza', linea: 'B', lat: -34.5570, lon: -58.4650 },
+            { id: 'C-01', nombre: 'Retiro', linea: 'C', lat: -34.5915, lon: -58.3755 },
+            { id: 'C-02', nombre: 'General San Martín', linea: 'C', lat: -34.5950, lon: -58.3760 },
+            { id: 'C-03', nombre: 'Lavalle', linea: 'C', lat: -34.5970, lon: -58.3770 },
+            { id: 'C-04', nombre: 'Diagonal Norte', linea: 'C', lat: -34.6030, lon: -58.3780 },
+            { id: 'C-05', nombre: 'Avenida de Mayo', linea: 'C', lat: -34.6085, lon: -58.3790 },
+            { id: 'C-06', nombre: 'Moreno', linea: 'C', lat: -34.6105, lon: -58.3805 },
+            { id: 'C-07', nombre: 'Independencia', linea: 'C', lat: -34.6150, lon: -58.3820 },
+            { id: 'C-08', nombre: 'San Juan', linea: 'C', lat: -34.6200, lon: -58.3835 },
+            { id: 'C-09', nombre: 'Constitución', linea: 'C', lat: -34.6270, lon: -58.3805 },
+            { id: 'D-01', nombre: 'Catedral', linea: 'D', lat: -34.6077, lon: -58.3731 },
+            { id: 'D-02', nombre: '9 de Julio', linea: 'D', lat: -34.6035, lon: -58.3820 },
+            { id: 'D-03', nombre: 'Tribunales', linea: 'D', lat: -34.6000, lon: -58.3880 },
+            { id: 'D-04', nombre: 'Callao', linea: 'D', lat: -34.5950, lon: -58.3930 },
+            { id: 'D-05', nombre: 'Facultad de Medicina', linea: 'D', lat: -34.5900, lon: -58.3980 },
+            { id: 'D-06', nombre: 'Pueyrredón', linea: 'D', lat: -34.5850, lon: -58.4030 },
+            { id: 'D-07', nombre: 'Agüero', linea: 'D', lat: -34.5800, lon: -58.4080 },
+            { id: 'D-08', nombre: 'Bulnes', linea: 'D', lat: -34.5750, lon: -58.4130 },
+            { id: 'D-09', nombre: 'Scalabrini Ortiz', linea: 'D', lat: -34.5700, lon: -58.4180 },
+            { id: 'D-10', nombre: 'Plaza Italia', linea: 'D', lat: -34.5820, lon: -58.4230 },
+            { id: 'D-11', nombre: 'Palermo', linea: 'D', lat: -34.5770, lon: -58.4280 },
+            { id: 'D-12', nombre: 'Ministro Carranza', linea: 'D', lat: -34.5720, lon: -58.4330 },
+            { id: 'D-13', nombre: 'Olleros', linea: 'D', lat: -34.5670, lon: -58.4380 },
+            { id: 'D-14', nombre: 'José Hernández', linea: 'D', lat: -34.5620, lon: -58.4430 },
+            { id: 'D-15', nombre: 'Juramento', linea: 'D', lat: -34.5570, lon: -58.4480 },
+            { id: 'D-16', nombre: 'Congreso de Tucumán', linea: 'D', lat: -34.5520, lon: -58.4530 },
+            { id: 'E-01', nombre: 'Retiro', linea: 'E', lat: -34.5915, lon: -58.3755 },
+            { id: 'E-02', nombre: 'Catalinas', linea: 'E', lat: -34.5930, lon: -58.3660 },
+            { id: 'E-03', nombre: 'Correo Central', linea: 'E', lat: -34.6090, lon: -58.3700 },
+            { id: 'E-04', nombre: 'Bolívar', linea: 'E', lat: -34.6100, lon: -58.3710 },
+            { id: 'E-05', nombre: 'Belgrano', linea: 'E', lat: -34.6105, lon: -58.3770 },
+            { id: 'E-06', nombre: 'Independencia', linea: 'E', lat: -34.6150, lon: -58.3820 },
+            { id: 'E-07', nombre: 'San José', linea: 'E', lat: -34.6180, lon: -58.3880 },
+            { id: 'E-08', nombre: 'Entre Ríos', linea: 'E', lat: -34.6200, lon: -58.3930 },
+            { id: 'E-09', nombre: 'Pichincha', linea: 'E', lat: -34.6220, lon: -58.3980 },
+            { id: 'E-10', nombre: 'Jujuy', linea: 'E', lat: -34.6250, lon: -58.4030 },
+            { id: 'E-11', nombre: 'General Urquiza', linea: 'E', lat: -34.6280, lon: -58.4080 },
+            { id: 'E-12', nombre: 'Boedo', linea: 'E', lat: -34.6310, lon: -58.4130 },
+            { id: 'E-13', nombre: 'Avenida La Plata', linea: 'E', lat: -34.6350, lon: -58.4180 },
+            { id: 'E-14', nombre: 'José María Moreno', linea: 'E', lat: -34.6400, lon: -58.4230 },
+            { id: 'E-15', nombre: 'Emilio Mitre', linea: 'E', lat: -34.6450, lon: -58.4280 },
+            { id: 'E-16', nombre: 'Medalla Milagrosa', linea: 'E', lat: -34.6500, lon: -58.4330 },
+            { id: 'E-17', nombre: 'Varela', linea: 'E', lat: -34.6550, lon: -58.4380 },
+            { id: 'E-18', nombre: 'Plaza de los Virreyes', linea: 'E', lat: -34.6600, lon: -58.4430 },
+            { id: 'H-01', nombre: 'Facultad de Derecho', linea: 'H', lat: -34.5820, lon: -58.3920 },
+            { id: 'H-02', nombre: 'Las Heras', linea: 'H', lat: -34.5870, lon: -58.3970 },
+            { id: 'H-03', nombre: 'Santa Fe', linea: 'H', lat: -34.5920, lon: -58.4020 },
+            { id: 'H-04', nombre: 'Córdoba', linea: 'H', lat: -34.5970, lon: -58.4070 },
+            { id: 'H-05', nombre: 'Corrientes', linea: 'H', lat: -34.6030, lon: -58.4100 }
+        ];
+
         function checkLogin() {
-            const pass = document.getElementById('password').value;
-            if (pass === 'SUBTE2024' || pass === '') {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('dashboard-content').style.display = 'block';
-                initMap();
-            } else {
-                alert('Contraseña incorrecta');
-            }
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('dashboard-content').style.display = 'block';
+            initMap();
         }
 
         function initMap() {
             const map = L.map('map').setView([-34.6037, -58.3816], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            
-            // Aquí podés seguir pegando tu lista de datosEstaciones
-            const datosEstaciones = [
-                { id: 'A-01', nombre: 'Plaza de Mayo', lat: -34.6083, lon: -58.3712 },
-                { id: 'H-05', nombre: 'Corrientes', lat: -34.6030, lon: -58.4100 }
-            ];
-
             datosEstaciones.forEach(est => {
-                L.marker([est.lat, est.lon]).addTo(map).bindPopup(est.nombre);
+                L.marker([est.lat, est.lon]).addTo(map).bindPopup(`<b>${est.nombre}</b>`);
             });
         }
     </script>
